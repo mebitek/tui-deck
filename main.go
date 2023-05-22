@@ -28,6 +28,7 @@ var detailText = tview.NewTextView()
 type Configuration struct {
 	User     string `json:"username"`
 	Password string `json:"password"`
+	Url      string `json:"url"`
 }
 
 type VTodoObect struct {
@@ -53,7 +54,7 @@ func main() {
 
 	auth := webdav.HTTPClientWithBasicAuth(nil, configuration.User, configuration.Password)
 
-	cal, err := caldav.NewClient(auth, "https://nextcloud.mebitek.com/remote.php/dav/calendars/mebitek")
+	cal, err := caldav.NewClient(auth, configuration.Url)
 	if err != nil {
 		log.Fatal("Error when opening file: ", err)
 	}
