@@ -1,15 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"log"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"tui-deck/utils"
 )
 
 var app = tview.NewApplication()
@@ -21,6 +24,11 @@ var stacks = make([]VTodoObect, 0)
 var todoMaps = make(map[string][]VTodoObect)
 
 var detailText = tview.NewTextView()
+
+type Configuration struct {
+	User     string `json:"username"`
+	Password string `json:"password"`
+}
 
 type VTodoObect struct {
 	Index       int
@@ -35,7 +43,15 @@ type VTodoObect struct {
 
 func main() {
 
-	auth := webdav.HTTPClientWithBasicAuth(nil, "mebitek", "_m0Uz?L1.1k")
+	configFile := utils.InitConfingDirectory()
+
+	file, _ := os.Open(configFile)
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	configuration := Configuration{}
+	err := decoder.Decode(&configuration)
+
+	auth := webdav.HTTPClientWithBasicAuth(nil, configuration.User, configuration.Password)
 
 	cal, err := caldav.NewClient(auth, "https://nextcloud.mebitek.com/remote.php/dav/calendars/mebitek")
 	if err != nil {
