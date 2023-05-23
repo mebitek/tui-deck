@@ -27,6 +27,7 @@ var detailText = tview.NewTextView()
 
 var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
+var todoListForFocus = make(map[int]tview.List)
 
 type Configuration struct {
 	User     string `json:"username"`
@@ -115,6 +116,9 @@ func main() {
 			app.Stop()
 		} else if event.Key() == tcell.KeyTab {
 			primitive := app.GetFocus()
+			list := primitive.(*tview.List)
+			list.SetTitleColor(tcell.ColorWhite)
+
 			actualPrimitiveIndex := primitives[primitive]
 			app.SetFocus(getNextFocus(actualPrimitiveIndex + 1))
 
@@ -127,9 +131,6 @@ func main() {
 	mainFlex.SetBorder(true)
 	mainFlex.SetBorderColor(tcell.Color133)
 	for index, s := range stacks {
-		flex := tview.NewFlex()
-		flex.SetTitle(s.Summary)
-		flex.SetBorder(true)
 
 		uid := s.Uid
 
@@ -140,6 +141,8 @@ func main() {
 		})
 
 		todoList := tview.NewList()
+		todoList.SetTitle(s.Summary)
+		todoList.SetBorder(true)
 		todoList.SetSecondaryTextColor(tcell.Color133)
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
@@ -158,10 +161,14 @@ func main() {
 			todoList.AddItem(strconv.Itoa(l.Index)+" - "+l.Summary, l.Categories, rune(0), nil)
 		}
 
-		flex.AddItem(todoList, 0, 1, true)
+		todoList.SetFocusFunc(func() {
+			todoList.SetTitleColor(tcell.Color133)
+		})
+
 		primitives[todoList] = index
 		primitivesIndexMap[index] = todoList
-		mainFlex.AddItem(flex, 0, 1, true)
+
+		mainFlex.AddItem(todoList, 0, 1, true)
 	}
 
 	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
