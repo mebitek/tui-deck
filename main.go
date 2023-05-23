@@ -25,6 +25,9 @@ var todoMaps = make(map[string][]VTodoObect)
 
 var detailText = tview.NewTextView()
 
+var primitives = make(map[tview.Primitive]int)
+var primitivesIndexMap = make(map[int]tview.Primitive)
+
 type Configuration struct {
 	User     string `json:"username"`
 	Password string `json:"password"`
@@ -110,6 +113,11 @@ func main() {
 		if event.Rune() == 113 {
 			// q
 			app.Stop()
+		} else if event.Key() == tcell.KeyTab {
+			primitive := app.GetFocus()
+			actualPrimitiveIndex := primitives[primitive]
+			app.SetFocus(getNextFocus(actualPrimitiveIndex + 1))
+
 		}
 		return event
 	})
@@ -118,7 +126,7 @@ func main() {
 	mainFlex.SetDirection(tview.FlexColumn)
 	mainFlex.SetBorder(true)
 	mainFlex.SetBorderColor(tcell.Color133)
-	for _, s := range stacks {
+	for index, s := range stacks {
 		flex := tview.NewFlex()
 		flex.SetTitle(s.Summary)
 		flex.SetBorder(true)
@@ -128,7 +136,6 @@ func main() {
 		list := todoMaps[uid]
 
 		sort.Slice(list, func(i, j int) bool {
-
 			return list[i].Index > (list[j].Index)
 		})
 
@@ -152,7 +159,8 @@ func main() {
 		}
 
 		flex.AddItem(todoList, 0, 1, true)
-
+		primitives[todoList] = index
+		primitivesIndexMap[index] = todoList
 		mainFlex.AddItem(flex, 0, 1, true)
 	}
 
@@ -172,4 +180,12 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func getNextFocus(index int) tview.Primitive {
+
+	if index == len(primitivesIndexMap) {
+		index = 0
+	}
+	return primitivesIndexMap[index]
 }
