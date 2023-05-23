@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"tui-deck/utils"
 )
 
@@ -31,7 +30,7 @@ var calendarClient = caldav.Client{}
 type VTodoObject struct {
 	Path        string
 	Index       int
-	DtStamp     time.Time
+	DtStamp     string
 	Uid         string
 	RelatedTo   string
 	Status      string
@@ -52,7 +51,7 @@ func main() {
 		footerBar.SetText(err.Error())
 	}
 
-	loadCalendars(configuration)
+	calendarClient = loadCalendars(configuration)
 
 	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 113 {
@@ -69,7 +68,7 @@ func main() {
 
 		} else if event.Rune() == 114 {
 			// r
-			loadCalendars(configuration)
+			calendarClient = loadCalendars(configuration)
 		}
 		return event
 	})
@@ -138,7 +137,7 @@ func getNextFocus(index int) tview.Primitive {
 	return primitivesIndexMap[index]
 }
 
-func loadCalendars(configuration utils.Configuration) {
+func loadCalendars(configuration utils.Configuration) caldav.Client {
 	mainFlex.Clear()
 	stacks = make([]VTodoObject, 0)
 	todoMaps = make(map[string][]VTodoObject)
@@ -149,15 +148,14 @@ func loadCalendars(configuration utils.Configuration) {
 		footerBar.SetText(err.Error())
 
 	}
-	calendarClient = *cal
-
 	calendars, err := cal.FindCalendars("")
 	if calendars == nil {
 		footerBar.SetText("No calendars found. Please check your configuration")
 	}
 
 	for _, c := range calendars {
-		if c.SupportedComponentSet[0] == "VTODO" {
+
+		if contains(c.SupportedComponentSet, "VTODO") {
 			query := &caldav.CalendarQuery{
 				CompFilter: caldav.CompFilter{
 					Name: "VCALENDAR",
@@ -182,7 +180,7 @@ func loadCalendars(configuration utils.Configuration) {
 				obj := VTodoObject{
 					Path:    c.Path,
 					Index:   index,
-					DtStamp: c.ModTime,
+					DtStamp: props.Get("DTSTAMP").Value,
 					Uid:     uid,
 					Summary: props.Get("SUMMARY").Value,
 				}
@@ -190,7 +188,9 @@ func loadCalendars(configuration utils.Configuration) {
 					stacks = append(stacks, obj)
 				} else {
 					obj.Description = props.Get("DESCRIPTION").Value
-					obj.Categories = props.Get("CATEGORIES").Value
+					if props.Get("CATEGORIES") != nil {
+						obj.Categories = props.Get("CATEGORIES").Value
+					}
 					obj.Status = props.Get("STATUS").Value
 					obj.RelatedTo = props.Get("RELATED-TO").Value
 					_, exists := todoMaps[obj.RelatedTo]
@@ -204,6 +204,7 @@ func loadCalendars(configuration utils.Configuration) {
 		}
 	}
 	buildStacks()
+	return *cal
 }
 
 func buildStacks() {
@@ -277,7 +278,7 @@ func buildICal() *ical.Calendar {
 					"DTSTAMP": []ical.Prop{{
 						Name:   "DTSTAMP",
 						Params: ical.Params{},
-						Value:  "19960704T120000Z",
+						Value:  editableObj.DtStamp,
 					}},
 					"UID": []ical.Prop{{
 						Name:   "UID",
@@ -324,4 +325,13 @@ func buildFullFlex(primitive tview.Primitive) {
 	fullFlex.AddItem(primitive, 0, 10, true)
 	fullFlex.AddItem(footerBar, 0, 1, false)
 	app.SetFocus(primitive)
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
