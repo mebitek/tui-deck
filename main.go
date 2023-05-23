@@ -15,23 +15,17 @@ import (
 
 var app = tview.NewApplication()
 var pages = tview.NewPages()
-
 var fullFlex = tview.NewFlex()
 var mainFlex = tview.NewFlex()
 var footerBar = tview.NewTextView()
 var stacks = make([]VTodoObject, 0)
-
 var todoMaps = make(map[string][]VTodoObject)
 var todoByUidMaps = make(map[int]VTodoObject)
-
 var detailText = tview.NewTextView()
 var detailEditText = tview.NewTextArea()
-
 var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
-
 var editableObj = VTodoObject{}
-
 var calendarClient = caldav.Client{}
 
 type VTodoObject struct {
@@ -97,9 +91,8 @@ func main() {
 		if event.Key() == tcell.KeyEscape {
 			buildFullFlex(mainFlex)
 		} else if event.Rune() == 101 {
-			detailEditText.SetTitle(detailText.GetTitle() + " - EDIT")
-
 			editableObj = todoByUidMaps[editableObj.Index]
+			detailEditText.SetTitle(detailText.GetTitle() + " - EDIT")
 			detailEditText.SetText(formatDescription(editableObj.Description), true)
 			buildFullFlex(detailEditText)
 		}
@@ -176,7 +169,7 @@ func loadCalendars(configuration utils.Configuration) {
 				},
 			}
 
-			calendarObjects, err := cal.QueryCalendar(c.Path, query)
+			var calendarObjects, err = cal.QueryCalendar(c.Path, query)
 			if err != nil {
 				footerBar.SetText(err.Error())
 			}
