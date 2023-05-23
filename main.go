@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"tui-deck/utils"
 )
 
@@ -37,6 +41,8 @@ type VTodoObject struct {
 	Categories  string
 	Summary     string
 	Description string
+	StackId     int
+	BoardId     int
 }
 
 func main() {
@@ -68,7 +74,7 @@ func main() {
 
 		} else if event.Rune() == 114 {
 			// r
-			calendarClient = loadCalendars(configuration)
+
 		}
 		return event
 	})
@@ -108,10 +114,36 @@ func main() {
 
 		} else if event.Key() == tcell.KeyF2 {
 			editableObj.Description = detailEditText.GetText()
-			_, err := calendarClient.PutCalendarObject(editableObj.Path, buildICal())
+
+			jsonBody := []byte(strings.ReplaceAll(`{"description": "`+editableObj.Description+`", "title": "`+editableObj.Summary+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`))
+			bodyReader := bytes.NewReader(jsonBody)
+
+			req, err := http.NewRequest(http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
+				strconv.Itoa(editableObj.BoardId)+
+				"/stacks/"+strconv.Itoa(editableObj.StackId)+
+				"/cards/"+strconv.Itoa(editableObj.Index), bodyReader)
 			if err != nil {
 				footerBar.SetText(err.Error())
+				return event
 			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Add("Authorization", "Basic "+basicAuth(configuration.User, configuration.Password))
+			client := http.Client{
+				Timeout: 30 * time.Second,
+			}
+
+			res, err := client.Do(req)
+			if err != nil {
+				footerBar.SetText(err.Error())
+				return event
+			}
+			_ = res
+
+			todoByUidMaps[editableObj.Index] = editableObj
+			mainFlex.Clear()
+			loadCalendars(configuration)
+			detailText.SetText(formatDescription(editableObj.Description))
+			buildFullFlex(detailText)
 
 		}
 		return event
@@ -130,6 +162,11 @@ func main() {
 
 }
 
+func basicAuth(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
 func getNextFocus(index int) tview.Primitive {
 	if index == len(primitivesIndexMap) {
 		index = 0
@@ -143,12 +180,11 @@ func loadCalendars(configuration utils.Configuration) caldav.Client {
 	todoMaps = make(map[string][]VTodoObject)
 	auth := webdav.HTTPClientWithBasicAuth(nil, configuration.User, configuration.Password)
 
-	cal, err := caldav.NewClient(auth, configuration.Url)
-	if err != nil {
-		footerBar.SetText(err.Error())
-
+	cal := &calendarClient
+	if calendarClient.Client == nil {
+		cal, _ = caldav.NewClient(auth, configuration.Url)
 	}
-	calendars, err := cal.FindCalendars("")
+	calendars, _ := cal.FindCalendars("")
 	if calendars == nil {
 		footerBar.SetText("No calendars found. Please check your configuration")
 	}
@@ -183,6 +219,7 @@ func loadCalendars(configuration utils.Configuration) caldav.Client {
 					DtStamp: props.Get("DTSTAMP").Value,
 					Uid:     uid,
 					Summary: props.Get("SUMMARY").Value,
+					BoardId: 1, //TODO get real board id
 				}
 				if props.Get("RELATED-TO") == nil {
 					stacks = append(stacks, obj)
@@ -193,6 +230,8 @@ func loadCalendars(configuration utils.Configuration) caldav.Client {
 					}
 					obj.Status = props.Get("STATUS").Value
 					obj.RelatedTo = props.Get("RELATED-TO").Value
+					stackSplit := strings.Split(obj.RelatedTo, "-")
+					obj.StackId, _ = strconv.Atoi(stackSplit[2])
 					_, exists := todoMaps[obj.RelatedTo]
 					if !exists {
 						todoMaps[obj.RelatedTo] = make([]VTodoObject, 0)
