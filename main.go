@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,17 +16,26 @@ import (
 var app = tview.NewApplication()
 var pages = tview.NewPages()
 
+var fullFlex = tview.NewFlex()
 var mainFlex = tview.NewFlex()
-var stacks = make([]VTodoObect, 0)
+var footerBar = tview.NewTextView()
+var stacks = make([]VTodoObject, 0)
 
-var todoMaps = make(map[string][]VTodoObect)
+var todoMaps = make(map[string][]VTodoObject)
+var todoByUidMaps = make(map[int]VTodoObject)
 
 var detailText = tview.NewTextView()
+var detailEditText = tview.NewTextArea()
 
 var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
 
-type VTodoObect struct {
+var editableObj = VTodoObject{}
+
+var calendarClient = caldav.Client{}
+
+type VTodoObject struct {
+	Path        string
 	Index       int
 	DtStamp     time.Time
 	Uid         string
@@ -39,9 +48,15 @@ type VTodoObect struct {
 
 func main() {
 
-	configFile := utils.InitConfingDirectory()
+	configFile, err := utils.InitConfingDirectory()
+	if err != nil {
+		footerBar.SetText(err.Error())
+	}
 
-	configuration := utils.GetConfiguration(configFile)
+	configuration, err := utils.GetConfiguration(configFile)
+	if err != nil {
+		footerBar.SetText(err.Error())
+	}
 
 	loadCalendars(configuration)
 
@@ -70,17 +85,52 @@ func main() {
 	mainFlex.SetBorder(true)
 	mainFlex.SetBorderColor(tcell.Color133)
 
+	footerBar.SetBorder(true)
+	footerBar.SetTitle("Info")
+	footerBar.SetBorderColor(tcell.Color133)
+
+	fullFlex.SetDirection(tview.FlexRow)
+	fullFlex.AddItem(mainFlex, 0, 10, true)
+	fullFlex.AddItem(footerBar, 0, 1, false)
+
 	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
-			pages.SwitchToPage("Main")
+			buildFullFlex(mainFlex)
+		} else if event.Rune() == 101 {
+			detailEditText.SetTitle(detailText.GetTitle() + " - EDIT")
+
+			editableObj = todoByUidMaps[editableObj.Index]
+			detailEditText.SetText(formatDescription(editableObj.Description), true)
+			buildFullFlex(detailEditText)
+		}
+		return event
+	})
+
+	detailEditText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			detailText.Clear()
+			detailText.SetTitle(editableObj.Summary)
+			detailText.SetText(formatDescription(editableObj.Description))
+
+			buildFullFlex(detailText)
+
+		} else if event.Key() == tcell.KeyF2 {
+			editableObj.Description = detailEditText.GetText()
+			_, err := calendarClient.PutCalendarObject(editableObj.Path, buildICal())
+			if err != nil {
+				footerBar.SetText(err.Error())
+			}
+
 		}
 		return event
 	})
 	detailText.SetBorder(true)
 	detailText.SetBorderColor(tcell.Color133)
 
-	pages.AddPage("Main", mainFlex, true, true)
-	pages.AddPage("TodoDetail", detailText, true, false)
+	detailEditText.SetBorder(true)
+	detailEditText.SetBorderColor(tcell.Color133)
+
+	pages.AddPage("Main", fullFlex, true, true)
 
 	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
@@ -97,16 +147,21 @@ func getNextFocus(index int) tview.Primitive {
 
 func loadCalendars(configuration utils.Configuration) {
 	mainFlex.Clear()
-	stacks = make([]VTodoObect, 0)
-	todoMaps = make(map[string][]VTodoObect)
+	stacks = make([]VTodoObject, 0)
+	todoMaps = make(map[string][]VTodoObject)
 	auth := webdav.HTTPClientWithBasicAuth(nil, configuration.User, configuration.Password)
 
 	cal, err := caldav.NewClient(auth, configuration.Url)
 	if err != nil {
-		log.Fatal("Error when opening file: ", err)
+		footerBar.SetText(err.Error())
+
 	}
+	calendarClient = *cal
 
 	calendars, err := cal.FindCalendars("")
+	if calendars == nil {
+		footerBar.SetText("No calendars found. Please check your configuration")
+	}
 
 	for _, c := range calendars {
 		if c.SupportedComponentSet[0] == "VTODO" {
@@ -123,7 +178,7 @@ func loadCalendars(configuration utils.Configuration) {
 
 			calendarObjects, err := cal.QueryCalendar(c.Path, query)
 			if err != nil {
-				log.Fatal("Error when opening file: ", err)
+				footerBar.SetText(err.Error())
 			}
 
 			for _, c := range calendarObjects {
@@ -131,7 +186,8 @@ func loadCalendars(configuration utils.Configuration) {
 				uid := props.Get("UID").Value
 				split := strings.Split(uid, "-")
 				index, _ := strconv.Atoi(split[len(split)-1])
-				obj := VTodoObect{
+				obj := VTodoObject{
+					Path:    c.Path,
 					Index:   index,
 					DtStamp: c.ModTime,
 					Uid:     uid,
@@ -146,10 +202,11 @@ func loadCalendars(configuration utils.Configuration) {
 					obj.RelatedTo = props.Get("RELATED-TO").Value
 					_, exists := todoMaps[obj.RelatedTo]
 					if !exists {
-						todoMaps[obj.RelatedTo] = make([]VTodoObect, 0)
+						todoMaps[obj.RelatedTo] = make([]VTodoObject, 0)
 					}
 					todoMaps[obj.RelatedTo] = append(todoMaps[obj.RelatedTo], obj)
 				}
+				todoByUidMaps[obj.Index] = obj
 			}
 		}
 	}
@@ -172,8 +229,9 @@ func buildStacks() {
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
 			detailText.SetTitle(list[index].Summary)
-			detailText.SetText(strings.ReplaceAll(list[index].Description, `\n`, "\n"))
-			pages.SwitchToPage("TodoDetail")
+			detailText.SetText(formatDescription(list[index].Description))
+			editableObj = list[index]
+			buildFullFlex(detailText)
 		})
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -197,4 +255,80 @@ func buildStacks() {
 		primitive := mainFlex.GetItem(0)
 		app.SetFocus(primitive)
 	}
+}
+
+func buildICal() *ical.Calendar {
+	return &ical.Calendar{Component: &ical.Component{
+		Name: "VCALENDAR",
+		Props: ical.Props{
+			"PRODID": []ical.Prop{{
+				Name:   "PRODID",
+				Params: ical.Params{},
+				Value:  "-//Sabre//Sabre VObject 4.4.2//EN",
+			}},
+			"VERSION": []ical.Prop{{
+				Name:   "VERSION",
+				Params: ical.Params{},
+				Value:  "2.0",
+			}},
+			"CALSCALE": []ical.Prop{{
+				Name:   "CALSCALE",
+				Params: ical.Params{},
+				Value:  "GREGORIAN",
+			}},
+		},
+		Children: []*ical.Component{
+			{
+				Name: "VTODO",
+				Props: ical.Props{
+					"DTSTAMP": []ical.Prop{{
+						Name:   "DTSTAMP",
+						Params: ical.Params{},
+						Value:  "19960704T120000Z",
+					}},
+					"UID": []ical.Prop{{
+						Name:   "UID",
+						Params: ical.Params{},
+						Value:  editableObj.Uid,
+					}},
+					"RELATED-TO": []ical.Prop{{
+						Name:   "RELATED-TO",
+						Params: ical.Params{},
+						Value:  editableObj.RelatedTo,
+					}},
+					"STATUS": []ical.Prop{{
+						Name:   "STATUS",
+						Params: ical.Params{},
+						Value:  editableObj.Status,
+					}},
+					"CATEGORIES": []ical.Prop{{
+						Name:   "CATEGORIES",
+						Params: ical.Params{},
+						Value:  editableObj.Categories,
+					}},
+					"SUMMARY": []ical.Prop{{
+						Name:   "SUMMARY",
+						Params: ical.Params{},
+						Value:  editableObj.Summary,
+					}},
+					"DESCRIPTION": []ical.Prop{{
+						Name:   "DESCRIPTION",
+						Params: ical.Params{},
+						Value:  editableObj.Description,
+					}},
+				},
+			},
+		},
+	}}
+}
+
+func formatDescription(description string) string {
+	return strings.ReplaceAll(description, `\n`, "\n")
+}
+
+func buildFullFlex(primitive tview.Primitive) {
+	fullFlex.Clear()
+	fullFlex.AddItem(primitive, 0, 10, true)
+	fullFlex.AddItem(footerBar, 0, 1, false)
+	app.SetFocus(primitive)
 }
