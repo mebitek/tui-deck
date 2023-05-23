@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/emersion/go-webdav"
 	"github.com/emersion/go-webdav/caldav"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"log"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,13 +25,6 @@ var detailText = tview.NewTextView()
 
 var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
-var todoListForFocus = make(map[int]tview.List)
-
-type Configuration struct {
-	User     string `json:"username"`
-	Password string `json:"password"`
-	Url      string `json:"url"`
-}
 
 type VTodoObect struct {
 	Index       int
@@ -50,12 +41,64 @@ func main() {
 
 	configFile := utils.InitConfingDirectory()
 
-	file, _ := os.Open(configFile)
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	configuration := Configuration{}
-	err := decoder.Decode(&configuration)
+	configuration := utils.GetConfiguration(configFile)
 
+	loadCalendars(configuration)
+
+	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == 113 {
+			// q
+			app.Stop()
+		} else if event.Key() == tcell.KeyTab {
+			// tab
+			primitive := app.GetFocus()
+			list := primitive.(*tview.List)
+			list.SetTitleColor(tcell.ColorWhite)
+
+			actualPrimitiveIndex := primitives[primitive]
+			app.SetFocus(getNextFocus(actualPrimitiveIndex + 1))
+
+		} else if event.Rune() == 114 {
+			// r
+			loadCalendars(configuration)
+		}
+		return event
+	})
+
+	mainFlex.SetTitle("TUI TODO")
+	mainFlex.SetDirection(tview.FlexColumn)
+	mainFlex.SetBorder(true)
+	mainFlex.SetBorderColor(tcell.Color133)
+
+	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			pages.SwitchToPage("Main")
+		}
+		return event
+	})
+	detailText.SetBorder(true)
+	detailText.SetBorderColor(tcell.Color133)
+
+	pages.AddPage("Main", mainFlex, true, true)
+	pages.AddPage("TodoDetail", detailText, true, false)
+
+	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
+		panic(err)
+	}
+
+}
+
+func getNextFocus(index int) tview.Primitive {
+	if index == len(primitivesIndexMap) {
+		index = 0
+	}
+	return primitivesIndexMap[index]
+}
+
+func loadCalendars(configuration utils.Configuration) {
+	mainFlex.Clear()
+	stacks = make([]VTodoObect, 0)
+	todoMaps = make(map[string][]VTodoObect)
 	auth := webdav.HTTPClientWithBasicAuth(nil, configuration.User, configuration.Password)
 
 	cal, err := caldav.NewClient(auth, configuration.Url)
@@ -70,19 +113,20 @@ func main() {
 			query := &caldav.CalendarQuery{
 				CompFilter: caldav.CompFilter{
 					Name: "VCALENDAR",
-					Comps: []caldav.CompFilter{{
-						Name: "VTODO",
-					},
+					Comps: []caldav.CompFilter{
+						{
+							Name: "VTODO",
+						},
 					},
 				},
 			}
 
-			calendarObjecrs, err := cal.QueryCalendar(c.Path, query)
+			calendarObjects, err := cal.QueryCalendar(c.Path, query)
 			if err != nil {
 				log.Fatal("Error when opening file: ", err)
 			}
 
-			for _, c := range calendarObjecrs {
+			for _, c := range calendarObjects {
 				props := c.Data.Children[0].Props
 				uid := props.Get("UID").Value
 				split := strings.Split(uid, "-")
@@ -109,32 +153,13 @@ func main() {
 			}
 		}
 	}
+	buildStacks()
+}
 
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Rune() == 113 {
-			// q
-			app.Stop()
-		} else if event.Key() == tcell.KeyTab {
-			primitive := app.GetFocus()
-			list := primitive.(*tview.List)
-			list.SetTitleColor(tcell.ColorWhite)
-
-			actualPrimitiveIndex := primitives[primitive]
-			app.SetFocus(getNextFocus(actualPrimitiveIndex + 1))
-
-		}
-		return event
-	})
-
-	mainFlex.SetTitle("TUI TODO")
-	mainFlex.SetDirection(tview.FlexColumn)
-	mainFlex.SetBorder(true)
-	mainFlex.SetBorderColor(tcell.Color133)
+func buildStacks() {
 	for index, s := range stacks {
 
-		uid := s.Uid
-
-		list := todoMaps[uid]
+		list := todoMaps[s.Uid]
 
 		sort.Slice(list, func(i, j int) bool {
 			return list[i].Index > (list[j].Index)
@@ -169,30 +194,7 @@ func main() {
 		primitivesIndexMap[index] = todoList
 
 		mainFlex.AddItem(todoList, 0, 1, true)
+		primitive := mainFlex.GetItem(0)
+		app.SetFocus(primitive)
 	}
-
-	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEscape {
-			pages.SwitchToPage("Main")
-		}
-		return event
-	})
-	detailText.SetBorder(true)
-	detailText.SetBorderColor(tcell.Color133)
-
-	pages.AddPage("Main", mainFlex, true, true)
-	pages.AddPage("TodoDetail", detailText, true, false)
-
-	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
-		panic(err)
-	}
-
-}
-
-func getNextFocus(index int) tview.Primitive {
-
-	if index == len(primitivesIndexMap) {
-		index = 0
-	}
-	return primitivesIndexMap[index]
 }

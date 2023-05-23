@@ -1,8 +1,15 @@
 package utils
 
 import (
+	"encoding/json"
 	"os"
 )
+
+type Configuration struct {
+	User     string `json:"username"`
+	Password string `json:"password"`
+	Url      string `json:"url"`
+}
 
 func InitConfingDirectory() string {
 	configDir := getUserDir() + "/.config/tui-deck"
@@ -25,6 +32,23 @@ func InitConfingDirectory() string {
 	}
 	return configFile
 
+}
+
+func GetConfiguration(configFile string) Configuration {
+	file, _ := os.Open(configFile)
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic(err.Error())
+		}
+	}(file)
+	decoder := json.NewDecoder(file)
+	configuration := Configuration{}
+	err := decoder.Decode(&configuration)
+	if err != nil {
+		return Configuration{}
+	}
+	return configuration
 }
 
 func getUserDir() string {
