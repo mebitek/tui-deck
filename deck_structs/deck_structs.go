@@ -7,10 +7,11 @@ type Owner struct {
 }
 
 type Board struct {
-	Id    int
-	Title string
-	Owner Owner
-	Color string
+	Id     int
+	Title  string
+	Owner  Owner
+	Color  string
+	Labels []Label
 }
 
 type Stack struct {

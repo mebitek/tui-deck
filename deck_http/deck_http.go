@@ -90,3 +90,61 @@ func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configura
 	}
 	return card, nil
 }
+
+func GetBoardDetail(boardId int, configuration utils.Configuration) (deck_structs.Board, error) {
+	call, err := httpCall(nil, http.MethodGet, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+strconv.Itoa(boardId), configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Board{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var board deck_structs.Board
+
+	err = decoder.Decode(&board)
+	if err != nil {
+		panic(err)
+	}
+	return board, nil
+}
+
+func DeleteLabel(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
+		strconv.Itoa(boardId)+"/stacks/"+
+		strconv.Itoa(stackId)+"/cards/"+
+		strconv.Itoa(cardId)+"/removeLabel", configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Card{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var card deck_structs.Card
+
+	err = decoder.Decode(&card)
+	if err != nil {
+		panic(err)
+	}
+	return card, nil
+}
+
+func AssignLabel(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
+		strconv.Itoa(boardId)+"/stacks/"+
+		strconv.Itoa(stackId)+"/cards/"+
+		strconv.Itoa(cardId)+"/assignLabel", configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Card{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var card deck_structs.Card
+
+	err = decoder.Decode(&card)
+	if err != nil {
+		panic(err)
+	}
+	return card, nil
+}
