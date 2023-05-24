@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"strconv"
@@ -44,12 +45,14 @@ func main() {
 	}
 
 	//TODO add default board parameter?
+	fmt.Print("Getting boards...\n")
 	boards, err = deck_http.GetBoards(configuration)
 	if err != nil {
 		footerBar.SetText("Error getting boards: " + err.Error())
 	}
 
 	if len(boards) > 0 {
+		fmt.Print("Getting current board detail...\n")
 		currentBoard, err = deck_http.GetBoardDetail(boards[0].Id, configuration)
 		if err != nil {
 			footerBar.SetText("Error getting board detail: " + err.Error())
@@ -60,6 +63,7 @@ func main() {
 		footerBar.SetText("No boards found")
 	}
 
+	fmt.Print("Getting stacks...\n")
 	stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
 	if err != nil {
 		footerBar.SetText("Error getting stacks: " + err.Error())
