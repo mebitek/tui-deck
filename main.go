@@ -158,6 +158,12 @@ func getNextFocus(index int) tview.Primitive {
 	return primitivesIndexMap[index]
 }
 
+func getCardId(name string) int {
+	split := strings.Split(name, "-")
+	cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
+	return cardId
+}
+
 func buildStacks() {
 	mainFlex.Clear()
 	for index, s := range stacks {
@@ -170,54 +176,11 @@ func buildStacks() {
 				return nil
 			}
 			if event.Key() == tcell.KeyRight {
-
-				i := todoList.GetCurrentItem()
-				name, _ := todoList.GetItemText(i)
-				split := strings.Split(name, "-")
-				cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
-				card := cardsMap[cardId]
-				if card.StackId == len(stacks) {
-					return nil
-				}
-
-				jsonBody := strings.ReplaceAll(`{"stackId": "`+strconv.Itoa(card.StackId+1)+`", "title": "`+card.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
-				_, err := deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
-				if err != nil {
-					footerBar.SetText("Error moving card: " + err.Error())
-					return nil
-				}
-				stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
-				if err != nil {
-					footerBar.SetText("Error getting stacks: " + err.Error())
-					return nil
-				}
-
-				buildStacks()
+				moveCardToStack(*todoList, tcell.KeyRight)
 				return nil
 			}
 			if event.Key() == tcell.KeyLeft {
-				i := todoList.GetCurrentItem()
-				name, _ := todoList.GetItemText(i)
-				split := strings.Split(name, "-")
-				cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
-				card := cardsMap[cardId]
-				if card.StackId == 1 {
-					return nil
-				}
-				jsonBody := strings.ReplaceAll(`{"stackId": "`+strconv.Itoa(card.StackId-1)+`", "title": "`+card.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
-
-				_, err := deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
-				if err != nil {
-					footerBar.SetText("Error moving card: " + err.Error())
-					return nil
-				}
-				stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
-				if err != nil {
-					footerBar.SetText("Error getting stacks: " + err.Error())
-					return nil
-				}
-
-				buildStacks()
+				moveCardToStack(*todoList, tcell.KeyLeft)
 				return nil
 			}
 			return event
@@ -236,9 +199,7 @@ func buildStacks() {
 		}
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
-
-			split := strings.Split(name, "-")
-			cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
+			cardId := getCardId(name)
 
 			detailText.SetTitle(" " + cardsMap[cardId].Title + " ")
 			detailText.SetText(formatDescription(cardsMap[cardId].Description))
@@ -321,4 +282,40 @@ func buildHelp() {
 		}
 		return event
 	})
+}
+
+func moveCardToStack(todoList tview.List, key tcell.Key) {
+	i := todoList.GetCurrentItem()
+	name, _ := todoList.GetItemText(i)
+	cardId := getCardId(name)
+	card := cardsMap[cardId]
+
+	position := ""
+	switch key {
+	case tcell.KeyLeft:
+		if card.StackId == 1 {
+			return
+		}
+		position = strconv.Itoa(card.StackId - 1)
+		break
+	case tcell.KeyRight:
+		if card.StackId == len(stacks) {
+			return
+		}
+		position = strconv.Itoa(card.StackId + 1)
+		break
+	}
+	jsonBody := strings.ReplaceAll(`{"stackId": "`+position+`", "title": "`+card.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
+
+	_, err := deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
+	if err != nil {
+		footerBar.SetText("Error moving card: " + err.Error())
+		return
+	}
+	stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+	if err != nil {
+		footerBar.SetText("Error getting stacks: " + err.Error())
+		return
+	}
+	buildStacks()
 }
