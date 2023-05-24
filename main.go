@@ -5,6 +5,7 @@ import (
 	"github.com/rivo/tview"
 	"strconv"
 	"strings"
+	"tui-deck/deck_help"
 	"tui-deck/deck_http"
 	"tui-deck/deck_structs"
 	"tui-deck/utils"
@@ -26,6 +27,8 @@ var editableCard = deck_structs.Card{}
 var currentBoard deck_structs.Board
 var boardList = tview.NewList()
 
+var configuration utils.Configuration
+
 func main() {
 
 	configFile, err := utils.InitConfingDirectory()
@@ -33,7 +36,7 @@ func main() {
 		footerBar.SetText(err.Error())
 	}
 
-	configuration, err := utils.GetConfiguration(configFile)
+	configuration, err = utils.GetConfiguration(configFile)
 	if err != nil {
 		footerBar.SetText(err.Error())
 	}
@@ -41,7 +44,7 @@ func main() {
 	//TODO add default board parameter?
 	boards, err = deck_http.GetBoards(configuration)
 	if err != nil {
-		footerBar.SetText(err.Error())
+		footerBar.SetText("Error getting boards: " + err.Error())
 	}
 
 	if len(boards) > 0 {
@@ -53,7 +56,7 @@ func main() {
 
 	stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
 	if err != nil {
-		footerBar.SetText(err.Error())
+		footerBar.SetText("Error getting stacks: " + err.Error())
 	}
 
 	go buildStacks()
@@ -75,15 +78,19 @@ func main() {
 			// r -> relaod stacks
 			stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
 			if err != nil {
-				footerBar.SetText(err.Error())
+				footerBar.SetText("Error reloading stacks: " + err.Error())
 			}
-
 			go buildStacks()
 		} else if event.Rune() == 115 {
 			// s -> switch board
 			go buildFullFlex(boardList)
+		} else if event.Rune() == 63 {
+			// ? deck_help menu
+			buildHelp()
 		}
+
 		return event
+
 	})
 
 	mainFlex.SetTitle(" TUI DECK: [#" + currentBoard.Color + "]" + currentBoard.Title + " ")
@@ -121,7 +128,7 @@ func main() {
 			jsonBody := strings.ReplaceAll(`{"description": "`+editableCard.Description+`", "title": "`+editableCard.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
 			editableCard, err = deck_http.UpdateCard(currentBoard.Id, editableCard.StackId, editableCard.Id, jsonBody, configuration)
 			if err != nil {
-				footerBar.SetText(err.Error())
+				footerBar.SetText("Error updating card: " + err.Error())
 				return event
 			}
 			cardsMap[editableCard.Id] = editableCard
@@ -160,6 +167,57 @@ func buildStacks() {
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			if event.Key() == tcell.KeyTAB {
+				return nil
+			}
+			if event.Key() == tcell.KeyRight {
+
+				i := todoList.GetCurrentItem()
+				name, _ := todoList.GetItemText(i)
+				split := strings.Split(name, "-")
+				cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
+				card := cardsMap[cardId]
+				if card.StackId == len(stacks) {
+					return nil
+				}
+
+				jsonBody := strings.ReplaceAll(`{"stackId": "`+strconv.Itoa(card.StackId+1)+`", "title": "`+card.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
+				_, err := deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
+				if err != nil {
+					footerBar.SetText("Error moving card: " + err.Error())
+					return nil
+				}
+				stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+				if err != nil {
+					footerBar.SetText("Error getting stacks: " + err.Error())
+					return nil
+				}
+
+				buildStacks()
+				return nil
+			}
+			if event.Key() == tcell.KeyLeft {
+				i := todoList.GetCurrentItem()
+				name, _ := todoList.GetItemText(i)
+				split := strings.Split(name, "-")
+				cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
+				card := cardsMap[cardId]
+				if card.StackId == 1 {
+					return nil
+				}
+				jsonBody := strings.ReplaceAll(`{"stackId": "`+strconv.Itoa(card.StackId-1)+`", "title": "`+card.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
+
+				_, err := deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
+				if err != nil {
+					footerBar.SetText("Error moving card: " + err.Error())
+					return nil
+				}
+				stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+				if err != nil {
+					footerBar.SetText("Error getting stacks: " + err.Error())
+					return nil
+				}
+
+				buildStacks()
 				return nil
 			}
 			return event
@@ -231,9 +289,36 @@ func buildSwitchBoard(configuration utils.Configuration) {
 		var err error = nil
 		stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
 		if err != nil {
-			footerBar.SetText(err.Error())
+			footerBar.SetText("Error getting stacks: " + err.Error())
 		}
 		buildStacks()
 		go buildFullFlex(mainFlex)
+	})
+}
+
+func buildHelp() {
+	deck_help.InitHelp()
+	help := tview.NewFrame(deck_help.HelpMain)
+	help.SetBorder(true)
+	help.SetBorderColor(tcell.Color133)
+	help.SetTitle(deck_help.HelpMain.GetTitle())
+	go buildFullFlex(help)
+
+	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			go buildFullFlex(mainFlex)
+			return nil
+		} else if event.Key() == tcell.KeyEnter {
+			switch {
+			case help.GetPrimitive() == deck_help.HelpMain:
+				help.SetTitle(deck_help.HelpEdit.GetTitle())
+				help.SetPrimitive(deck_help.HelpEdit)
+			case help.GetPrimitive() == deck_help.HelpEdit:
+				help.SetTitle(deck_help.HelpMain.GetTitle())
+				help.SetPrimitive(deck_help.HelpMain)
+			}
+			return nil
+		}
+		return event
 	})
 }

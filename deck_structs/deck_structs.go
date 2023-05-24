@@ -26,6 +26,7 @@ type Card struct {
 	Description string
 	Labels      []Label
 	StackId     int
+	Order       int
 }
 
 type Label struct {
