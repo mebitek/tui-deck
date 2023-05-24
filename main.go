@@ -16,6 +16,7 @@ var fullFlex = tview.NewFlex()
 var mainFlex = tview.NewFlex()
 var footerBar = tview.NewTextView()
 var stacks []deck_structs.Stack
+var boards []deck_structs.Board
 var cardsMap = make(map[int]deck_structs.Card)
 var detailText = tview.NewTextView()
 var detailEditText = tview.NewTextArea()
@@ -23,6 +24,8 @@ var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
 var editableObj = deck_structs.Card{}
 var currentBoard deck_structs.Board
+
+var boardList = tview.NewList()
 
 func main() {
 
@@ -36,15 +39,38 @@ func main() {
 		footerBar.SetText(err.Error())
 	}
 
-	//TODO add default board parameter
+	//TODO add default board parameter?
 
-	boards, err := deck_http.GetBoards(configuration)
+	boards, err = deck_http.GetBoards(configuration)
 	if err != nil {
 		footerBar.SetText(err.Error())
 	}
 
 	if len(boards) > 0 {
 		currentBoard = boards[0]
+		boardList.SetBorder(true)
+		boardList.SetBorderColor(tcell.Color133)
+		boardList.SetTitle("Select Boards")
+		for _, b := range boards {
+			boardList.AddItem(b.Title, "", rune(0), nil)
+		}
+		boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if event.Key() == tcell.KeyEsc {
+				go buildFullFlex(mainFlex)
+			}
+			return event
+		})
+		boardList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
+			currentBoard = boards[index]
+			mainFlex.SetTitle(" TUI DECK: [#" + currentBoard.Color + "]" + currentBoard.Title + " ")
+			stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+			if err != nil {
+				footerBar.SetText(err.Error())
+			}
+			buildStacks()
+			go buildFullFlex(mainFlex)
+		})
+
 	} else {
 		footerBar.SetText("No boards found")
 	}
@@ -58,10 +84,10 @@ func main() {
 
 	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 113 {
-			// q
+			// q -> quit app
 			app.Stop()
 		} else if event.Key() == tcell.KeyTab {
-			// tab
+			// tab -> switch focus between stacks
 			primitive := app.GetFocus()
 			list := primitive.(*tview.List)
 			list.SetTitleColor(tcell.ColorWhite)
@@ -70,18 +96,22 @@ func main() {
 			app.SetFocus(getNextFocus(actualPrimitiveIndex + 1))
 
 		} else if event.Rune() == 114 {
-			// r
+			// r -> relaod stacks
 			stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
 			if err != nil {
 				footerBar.SetText(err.Error())
 			}
 
 			go buildStacks()
+		} else if event.Rune() == 115 {
+			// s -> switch board
+			go buildFullFlex(boardList)
+
 		}
 		return event
 	})
 
-	mainFlex.SetTitle(" TUI TODO ")
+	mainFlex.SetTitle(" TUI DECK: [#" + currentBoard.Color + "]" + currentBoard.Title + " ")
 	mainFlex.SetDirection(tview.FlexColumn)
 	mainFlex.SetBorder(true)
 	mainFlex.SetBorderColor(tcell.Color133)
@@ -155,6 +185,7 @@ func getNextFocus(index int) tview.Primitive {
 }
 
 func buildStacks() {
+	mainFlex.Clear()
 	for index, s := range stacks {
 
 		todoList := tview.NewList()
