@@ -1,18 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/base64"
-	"github.com/emersion/go-ical"
-	"github.com/emersion/go-webdav"
-	"github.com/emersion/go-webdav/caldav"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"net/http"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
+	"tui-deck/deck_http"
+	"tui-deck/deck_structs"
 	"tui-deck/utils"
 )
 
@@ -21,29 +15,14 @@ var pages = tview.NewPages()
 var fullFlex = tview.NewFlex()
 var mainFlex = tview.NewFlex()
 var footerBar = tview.NewTextView()
-var stacks = make([]VTodoObject, 0)
-var todoMaps = make(map[string][]VTodoObject)
-var todoByUidMaps = make(map[int]VTodoObject)
+var stacks []deck_structs.Stack
+var cardsMap = make(map[int]deck_structs.Card)
 var detailText = tview.NewTextView()
 var detailEditText = tview.NewTextArea()
 var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
-var editableObj = VTodoObject{}
-var calendarClient = caldav.Client{}
-
-type VTodoObject struct {
-	Path        string
-	Index       int
-	DtStamp     string
-	Uid         string
-	RelatedTo   string
-	Status      string
-	Categories  string
-	Summary     string
-	Description string
-	StackId     int
-	BoardId     int
-}
+var editableObj = deck_structs.Card{}
+var currentBoard deck_structs.Board
 
 func main() {
 
@@ -57,7 +36,25 @@ func main() {
 		footerBar.SetText(err.Error())
 	}
 
-	calendarClient = loadCalendars(configuration)
+	//TODO add default board parameter
+
+	boards, err := deck_http.GetBoards(configuration)
+	if err != nil {
+		footerBar.SetText(err.Error())
+	}
+
+	if len(boards) > 0 {
+		currentBoard = boards[0]
+	} else {
+		footerBar.SetText("No boards found")
+	}
+
+	stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+	if err != nil {
+		footerBar.SetText(err.Error())
+	}
+
+	go buildStacks()
 
 	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 113 {
@@ -74,18 +71,23 @@ func main() {
 
 		} else if event.Rune() == 114 {
 			// r
+			stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+			if err != nil {
+				footerBar.SetText(err.Error())
+			}
 
+			go buildStacks()
 		}
 		return event
 	})
 
-	mainFlex.SetTitle("TUI TODO")
+	mainFlex.SetTitle(" TUI TODO ")
 	mainFlex.SetDirection(tview.FlexColumn)
 	mainFlex.SetBorder(true)
 	mainFlex.SetBorderColor(tcell.Color133)
 
 	footerBar.SetBorder(true)
-	footerBar.SetTitle("Info")
+	footerBar.SetTitle(" Info ")
 	footerBar.SetBorderColor(tcell.Color133)
 
 	fullFlex.SetDirection(tview.FlexRow)
@@ -94,12 +96,12 @@ func main() {
 
 	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
-			buildFullFlex(mainFlex)
+			go buildFullFlex(mainFlex)
 		} else if event.Rune() == 101 {
-			editableObj = todoByUidMaps[editableObj.Index]
-			detailEditText.SetTitle(detailText.GetTitle() + " - EDIT")
+			//editableObj = todoByUidMaps[editableObj.Index]
+			detailEditText.SetTitle(" " + detailText.GetTitle() + " - EDIT ")
 			detailEditText.SetText(formatDescription(editableObj.Description), true)
-			buildFullFlex(detailEditText)
+			go buildFullFlex(detailEditText)
 		}
 		return event
 	})
@@ -107,43 +109,26 @@ func main() {
 	detailEditText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
 			detailText.Clear()
-			detailText.SetTitle(editableObj.Summary)
+			detailText.SetTitle(" " + editableObj.Title + " ")
 			detailText.SetText(formatDescription(editableObj.Description))
 
-			buildFullFlex(detailText)
+			go buildFullFlex(detailText)
 
 		} else if event.Key() == tcell.KeyF2 {
 			editableObj.Description = detailEditText.GetText()
 
-			jsonBody := []byte(strings.ReplaceAll(`{"description": "`+editableObj.Description+`", "title": "`+editableObj.Summary+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`))
-			bodyReader := bytes.NewReader(jsonBody)
+			jsonBody := strings.ReplaceAll(`{"description": "`+editableObj.Description+`", "title": "`+editableObj.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
 
-			req, err := http.NewRequest(http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
-				strconv.Itoa(editableObj.BoardId)+
-				"/stacks/"+strconv.Itoa(editableObj.StackId)+
-				"/cards/"+strconv.Itoa(editableObj.Index), bodyReader)
+			editableObj, err = deck_http.UpdateCard(currentBoard.Id, editableObj.StackId, editableObj.Id, jsonBody, configuration)
 			if err != nil {
 				footerBar.SetText(err.Error())
 				return event
 			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Add("Authorization", "Basic "+basicAuth(configuration.User, configuration.Password))
-			client := http.Client{
-				Timeout: 30 * time.Second,
-			}
 
-			res, err := client.Do(req)
-			if err != nil {
-				footerBar.SetText(err.Error())
-				return event
-			}
-			_ = res
+			cardsMap[editableObj.Id] = editableObj
 
-			todoByUidMaps[editableObj.Index] = editableObj
-			mainFlex.Clear()
-			loadCalendars(configuration)
 			detailText.SetText(formatDescription(editableObj.Description))
-			buildFullFlex(detailText)
+			go buildFullFlex(detailText)
 
 		}
 		return event
@@ -162,11 +147,6 @@ func main() {
 
 }
 
-func basicAuth(username, password string) string {
-	auth := username + ":" + password
-	return base64.StdEncoding.EncodeToString([]byte(auth))
-}
-
 func getNextFocus(index int) tview.Primitive {
 	if index == len(primitivesIndexMap) {
 		index = 0
@@ -174,98 +154,13 @@ func getNextFocus(index int) tview.Primitive {
 	return primitivesIndexMap[index]
 }
 
-func loadCalendars(configuration utils.Configuration) caldav.Client {
-	mainFlex.Clear()
-	stacks = make([]VTodoObject, 0)
-	todoMaps = make(map[string][]VTodoObject)
-	auth := webdav.HTTPClientWithBasicAuth(nil, configuration.User, configuration.Password)
-
-	cal := &calendarClient
-	if calendarClient.Client == nil {
-		cal, _ = caldav.NewClient(auth, configuration.Url)
-	}
-	calendars, _ := cal.FindCalendars("")
-	if calendars == nil {
-		footerBar.SetText("No calendars found. Please check your configuration")
-	}
-
-	for _, c := range calendars {
-
-		if contains(c.SupportedComponentSet, "VTODO") {
-			query := &caldav.CalendarQuery{
-				CompFilter: caldav.CompFilter{
-					Name: "VCALENDAR",
-					Comps: []caldav.CompFilter{
-						{
-							Name: "VTODO",
-						},
-					},
-				},
-			}
-
-			var calendarObjects, err = cal.QueryCalendar(c.Path, query)
-			if err != nil {
-				footerBar.SetText(err.Error())
-			}
-
-			for _, c := range calendarObjects {
-				props := c.Data.Children[0].Props
-				uid := props.Get("UID").Value
-				split := strings.Split(uid, "-")
-				index, _ := strconv.Atoi(split[len(split)-1])
-				obj := VTodoObject{
-					Path:    c.Path,
-					Index:   index,
-					DtStamp: props.Get("DTSTAMP").Value,
-					Uid:     uid,
-					Summary: props.Get("SUMMARY").Value,
-					BoardId: 1, //TODO get real board id
-				}
-				if props.Get("RELATED-TO") == nil {
-					stacks = append(stacks, obj)
-				} else {
-					obj.Description = props.Get("DESCRIPTION").Value
-					if props.Get("CATEGORIES") != nil {
-						obj.Categories = props.Get("CATEGORIES").Value
-					}
-					obj.Status = props.Get("STATUS").Value
-					obj.RelatedTo = props.Get("RELATED-TO").Value
-					stackSplit := strings.Split(obj.RelatedTo, "-")
-					obj.StackId, _ = strconv.Atoi(stackSplit[2])
-					_, exists := todoMaps[obj.RelatedTo]
-					if !exists {
-						todoMaps[obj.RelatedTo] = make([]VTodoObject, 0)
-					}
-					todoMaps[obj.RelatedTo] = append(todoMaps[obj.RelatedTo], obj)
-				}
-				todoByUidMaps[obj.Index] = obj
-			}
-		}
-	}
-	buildStacks()
-	return *cal
-}
-
 func buildStacks() {
 	for index, s := range stacks {
 
-		list := todoMaps[s.Uid]
-
-		sort.Slice(list, func(i, j int) bool {
-			return list[i].Index > (list[j].Index)
-		})
-
 		todoList := tview.NewList()
-		todoList.SetTitle(s.Summary)
+		todoList.SetTitle(" " + s.Title + " ")
 		todoList.SetBorder(true)
-		todoList.SetSecondaryTextColor(tcell.Color133)
-
-		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
-			detailText.SetTitle(list[index].Summary)
-			detailText.SetText(formatDescription(list[index].Description))
-			editableObj = list[index]
-			buildFullFlex(detailText)
-		})
+		//todoList.SetSecondaryTextColor(tcell.Color133)
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			if event.Key() == tcell.KeyTAB {
@@ -273,9 +168,30 @@ func buildStacks() {
 			}
 			return event
 		})
-		for _, l := range list {
-			todoList.AddItem(strconv.Itoa(l.Index)+" - "+l.Summary, l.Categories, rune(0), nil)
+
+		for _, card := range s.Cards {
+			var labels = ""
+			for i, label := range card.Labels {
+				labels = labels + "[#" + label.Color + "]" + label.Title + "[white]"
+				if i != len(card.Labels)-1 {
+					labels = labels + ", "
+				}
+			}
+			cardsMap[card.Id] = card
+
+			todoList.AddItem(strconv.Itoa(card.Id)+" - "+card.Title, labels, rune(0), nil)
 		}
+
+		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
+
+			split := strings.Split(name, "-")
+			cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
+
+			detailText.SetTitle(" " + cardsMap[cardId].Title + " ")
+			detailText.SetText(formatDescription(cardsMap[cardId].Description))
+			editableObj = cardsMap[cardId]
+			buildFullFlex(detailText)
+		})
 
 		todoList.SetFocusFunc(func() {
 			todoList.SetTitleColor(tcell.Color133)
@@ -290,71 +206,6 @@ func buildStacks() {
 	}
 }
 
-func buildICal() *ical.Calendar {
-	return &ical.Calendar{Component: &ical.Component{
-		Name: "VCALENDAR",
-		Props: ical.Props{
-			"PRODID": []ical.Prop{{
-				Name:   "PRODID",
-				Params: ical.Params{},
-				Value:  "-//Sabre//Sabre VObject 4.4.2//EN",
-			}},
-			"VERSION": []ical.Prop{{
-				Name:   "VERSION",
-				Params: ical.Params{},
-				Value:  "2.0",
-			}},
-			"CALSCALE": []ical.Prop{{
-				Name:   "CALSCALE",
-				Params: ical.Params{},
-				Value:  "GREGORIAN",
-			}},
-		},
-		Children: []*ical.Component{
-			{
-				Name: "VTODO",
-				Props: ical.Props{
-					"DTSTAMP": []ical.Prop{{
-						Name:   "DTSTAMP",
-						Params: ical.Params{},
-						Value:  editableObj.DtStamp,
-					}},
-					"UID": []ical.Prop{{
-						Name:   "UID",
-						Params: ical.Params{},
-						Value:  editableObj.Uid,
-					}},
-					"RELATED-TO": []ical.Prop{{
-						Name:   "RELATED-TO",
-						Params: ical.Params{},
-						Value:  editableObj.RelatedTo,
-					}},
-					"STATUS": []ical.Prop{{
-						Name:   "STATUS",
-						Params: ical.Params{},
-						Value:  editableObj.Status,
-					}},
-					"CATEGORIES": []ical.Prop{{
-						Name:   "CATEGORIES",
-						Params: ical.Params{},
-						Value:  editableObj.Categories,
-					}},
-					"SUMMARY": []ical.Prop{{
-						Name:   "SUMMARY",
-						Params: ical.Params{},
-						Value:  editableObj.Summary,
-					}},
-					"DESCRIPTION": []ical.Prop{{
-						Name:   "DESCRIPTION",
-						Params: ical.Params{},
-						Value:  editableObj.Description,
-					}},
-				},
-			},
-		},
-	}}
-}
-
 func formatDescription(description string) string {
 	return strings.ReplaceAll(description, `\n`, "\n")
 }
@@ -364,13 +215,4 @@ func buildFullFlex(primitive tview.Primitive) {
 	fullFlex.AddItem(primitive, 0, 10, true)
 	fullFlex.AddItem(footerBar, 0, 1, false)
 	app.SetFocus(primitive)
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
