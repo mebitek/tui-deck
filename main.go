@@ -144,17 +144,7 @@ func main() {
 				cardsMap[editableCard.Id] = editableCard
 				actualLabelList.RemoveItem(index)
 
-				for i, s := range stacks {
-					if s.Id == editableCard.StackId {
-						for j, c := range s.Cards {
-							if c.Id == editableCard.Id {
-								stacks[i].Cards[j] = editableCard
-								break
-							}
-						}
-						break
-					}
-				}
+				updateStacks()
 				buildStacks()
 				app.SetFocus(actualLabelList)
 			})
@@ -179,17 +169,7 @@ func main() {
 				editableCard.Labels = append(editableCard.Labels, label)
 				cardsMap[editableCard.Id] = editableCard
 				actualLabelList.AddItem("[#"+label.Color+"]"+label.Title, "", rune, nil)
-				for i, s := range stacks {
-					if s.Id == editableCard.StackId {
-						for j, c := range s.Cards {
-							if c.Id == editableCard.Id {
-								stacks[i].Cards[j] = editableCard
-								break
-							}
-						}
-						break
-					}
-				}
+				updateStacks()
 				buildStacks()
 				app.SetFocus(labelList)
 			})
@@ -441,4 +421,18 @@ func editCard() {
 		footerBar.SetText("Error updating card: " + err.Error())
 	}
 
+}
+
+func updateStacks() {
+	for i, s := range stacks {
+		if s.Id == editableCard.StackId {
+			for j, c := range s.Cards {
+				if c.Id == editableCard.Id {
+					stacks[i].Cards[j] = editableCard
+					break
+				}
+			}
+			break
+		}
+	}
 }
