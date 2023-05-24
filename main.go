@@ -22,9 +22,8 @@ var detailText = tview.NewTextView()
 var detailEditText = tview.NewTextArea()
 var primitives = make(map[tview.Primitive]int)
 var primitivesIndexMap = make(map[int]tview.Primitive)
-var editableObj = deck_structs.Card{}
+var editableCard = deck_structs.Card{}
 var currentBoard deck_structs.Board
-
 var boardList = tview.NewList()
 
 func main() {
@@ -40,7 +39,6 @@ func main() {
 	}
 
 	//TODO add default board parameter?
-
 	boards, err = deck_http.GetBoards(configuration)
 	if err != nil {
 		footerBar.SetText(err.Error())
@@ -48,29 +46,7 @@ func main() {
 
 	if len(boards) > 0 {
 		currentBoard = boards[0]
-		boardList.SetBorder(true)
-		boardList.SetBorderColor(tcell.Color133)
-		boardList.SetTitle("Select Boards")
-		for _, b := range boards {
-			boardList.AddItem(b.Title, "", rune(0), nil)
-		}
-		boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-			if event.Key() == tcell.KeyEsc {
-				go buildFullFlex(mainFlex)
-			}
-			return event
-		})
-		boardList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
-			currentBoard = boards[index]
-			mainFlex.SetTitle(" TUI DECK: [#" + currentBoard.Color + "]" + currentBoard.Title + " ")
-			stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
-			if err != nil {
-				footerBar.SetText(err.Error())
-			}
-			buildStacks()
-			go buildFullFlex(mainFlex)
-		})
-
+		go buildSwitchBoard(configuration)
 	} else {
 		footerBar.SetText("No boards found")
 	}
@@ -106,7 +82,6 @@ func main() {
 		} else if event.Rune() == 115 {
 			// s -> switch board
 			go buildFullFlex(boardList)
-
 		}
 		return event
 	})
@@ -128,9 +103,8 @@ func main() {
 		if event.Key() == tcell.KeyEscape {
 			go buildFullFlex(mainFlex)
 		} else if event.Rune() == 101 {
-			//editableObj = todoByUidMaps[editableObj.Index]
 			detailEditText.SetTitle(" " + detailText.GetTitle() + " - EDIT ")
-			detailEditText.SetText(formatDescription(editableObj.Description), true)
+			detailEditText.SetText(formatDescription(editableCard.Description), true)
 			go buildFullFlex(detailEditText)
 		}
 		return event
@@ -139,27 +113,20 @@ func main() {
 	detailEditText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
 			detailText.Clear()
-			detailText.SetTitle(" " + editableObj.Title + " ")
-			detailText.SetText(formatDescription(editableObj.Description))
-
+			detailText.SetTitle(" " + editableCard.Title + " ")
+			detailText.SetText(formatDescription(editableCard.Description))
 			go buildFullFlex(detailText)
-
 		} else if event.Key() == tcell.KeyF2 {
-			editableObj.Description = detailEditText.GetText()
-
-			jsonBody := strings.ReplaceAll(`{"description": "`+editableObj.Description+`", "title": "`+editableObj.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
-
-			editableObj, err = deck_http.UpdateCard(currentBoard.Id, editableObj.StackId, editableObj.Id, jsonBody, configuration)
+			editableCard.Description = detailEditText.GetText()
+			jsonBody := strings.ReplaceAll(`{"description": "`+editableCard.Description+`", "title": "`+editableCard.Title+`", "type": "plain", "owner":"`+configuration.User+`"}`, "\n", `\n`)
+			editableCard, err = deck_http.UpdateCard(currentBoard.Id, editableCard.StackId, editableCard.Id, jsonBody, configuration)
 			if err != nil {
 				footerBar.SetText(err.Error())
 				return event
 			}
-
-			cardsMap[editableObj.Id] = editableObj
-
-			detailText.SetText(formatDescription(editableObj.Description))
+			cardsMap[editableCard.Id] = editableCard
+			detailText.SetText(formatDescription(editableCard.Description))
 			go buildFullFlex(detailText)
-
 		}
 		return event
 	})
@@ -187,11 +154,9 @@ func getNextFocus(index int) tview.Primitive {
 func buildStacks() {
 	mainFlex.Clear()
 	for index, s := range stacks {
-
 		todoList := tview.NewList()
 		todoList.SetTitle(" " + s.Title + " ")
 		todoList.SetBorder(true)
-		//todoList.SetSecondaryTextColor(tcell.Color133)
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			if event.Key() == tcell.KeyTAB {
@@ -209,7 +174,6 @@ func buildStacks() {
 				}
 			}
 			cardsMap[card.Id] = card
-
 			todoList.AddItem(strconv.Itoa(card.Id)+" - "+card.Title, labels, rune(0), nil)
 		}
 
@@ -220,7 +184,7 @@ func buildStacks() {
 
 			detailText.SetTitle(" " + cardsMap[cardId].Title + " ")
 			detailText.SetText(formatDescription(cardsMap[cardId].Description))
-			editableObj = cardsMap[cardId]
+			editableCard = cardsMap[cardId]
 			buildFullFlex(detailText)
 		})
 
@@ -246,4 +210,30 @@ func buildFullFlex(primitive tview.Primitive) {
 	fullFlex.AddItem(primitive, 0, 10, true)
 	fullFlex.AddItem(footerBar, 0, 1, false)
 	app.SetFocus(primitive)
+}
+
+func buildSwitchBoard(configuration utils.Configuration) {
+	boardList.SetBorder(true)
+	boardList.SetBorderColor(tcell.Color133)
+	boardList.SetTitle("Select Boards")
+	for _, b := range boards {
+		boardList.AddItem(b.Title, "", rune(0), nil)
+	}
+	boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			go buildFullFlex(mainFlex)
+		}
+		return event
+	})
+	boardList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
+		currentBoard = boards[index]
+		mainFlex.SetTitle(" TUI DECK: [#" + currentBoard.Color + "]" + currentBoard.Title + " ")
+		var err error = nil
+		stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+		if err != nil {
+			footerBar.SetText(err.Error())
+		}
+		buildStacks()
+		go buildFullFlex(mainFlex)
+	})
 }
