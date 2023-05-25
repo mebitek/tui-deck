@@ -339,7 +339,7 @@ func buildSwitchBoard(configuration utils.Configuration) {
 	boardList.SetBorderColor(utils.GetColor(configuration.Color))
 	boardList.SetTitle("Select Boards")
 	for _, b := range boards {
-		boardList.AddItem(b.Title, "", rune(0), nil)
+		boardList.AddItem(fmt.Sprintf("[#%s]%s", b.Color, b.Title), "", rune(0), nil)
 	}
 	boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
