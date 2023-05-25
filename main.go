@@ -249,7 +249,9 @@ func getNextFocus(index int) tview.Primitive {
 
 func getCardId(name string) int {
 	split := strings.Split(name, "-")
-	cardId, _ := strconv.Atoi(strings.TrimSpace(split[0]))
+	v := strings.Split(strings.Split(split[0], "]")[1], "[")[0]
+	_ = v
+	cardId, _ := strconv.Atoi(strings.TrimSpace(v[1:]))
 	return cardId
 }
 
@@ -284,7 +286,7 @@ func buildStacks() {
 				}
 			}
 			cardsMap[card.Id] = card
-			todoList.AddItem(fmt.Sprintf("%d - %s ", card.Id, card.Title), labels, rune(0), nil)
+			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
 		}
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
