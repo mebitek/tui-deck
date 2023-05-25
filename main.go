@@ -458,7 +458,7 @@ func moveCardToStack(todoList tview.List, key tcell.Key) {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"stackId": "%d", "title": "%s", "type": "plain", "owner":"%s"}`,
 		position, card.Title, configuration.User), "\n", `\n`)
 
-	go deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
+	go updateCard(currentBoard.Id, card.StackId, card.Id, jsonBody)
 
 	var labels = buildLabels(card)
 	card.StackId = position
@@ -466,6 +466,13 @@ func moveCardToStack(todoList tview.List, key tcell.Key) {
 	destList := getNextFocus(actualPrimitiveIndex + operator).(*tview.List)
 	destList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
 	todoList.RemoveItem(i)
+}
+func updateCard(boardId, stackId int, cardId int, jsonBody string) {
+	_, err := deck_http.UpdateCard(boardId, stackId, cardId, jsonBody, configuration)
+	if err != nil {
+		footerBar.SetText(fmt.Sprintf("Error moving card: %s", err.Error()))
+		return
+	}
 }
 
 func buildLabels(card deck_structs.Card) string {
