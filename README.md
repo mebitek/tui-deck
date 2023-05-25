@@ -2,13 +2,14 @@
 A TUI frontend for Nextcloud Deck app written in GO using the [Rich Interactive Widgets for Terminal UIs
 ](https://github.com/rivo/tview)
 
+___
 
 # features
 
-* switch between boards
+* switch between boardsmebitek
 * list cards
 * edit card description
-* move cards between stacks
+* move cards between stacksmebitek
 * add/remove labels from cards
 * theming
 
@@ -20,6 +21,19 @@ A TUI frontend for Nextcloud Deck app written in GO using the [Rich Interactive 
 * manage comments
 * manage attachments
 * improve boot time with local storage data
+
+# configuration
+
+on first start, the application will create a default config.json file in $HOME/.config/tui-deck directory
+
+```
+{
+  "username": "",
+  "password": "",
+  "url": "https://nextcloud.example.com",
+  "color": "#BF40BF"
+}
+```
 
 # shortcuts
 
