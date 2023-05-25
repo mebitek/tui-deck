@@ -232,7 +232,7 @@ func main() {
 
 	pages.AddPage("Main", fullFlex, true, true)
 
-	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
+	if err := app.SetRoot(pages, true).EnableMouse(false).Run(); err != nil {
 		panic(err)
 	}
 
