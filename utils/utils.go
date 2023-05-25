@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/gdamore/tcell/v2"
 	"os"
+	"path/filepath"
 )
 
 type Configuration struct {
@@ -13,12 +14,12 @@ type Configuration struct {
 	Color    string `json:"color"`
 }
 
-func InitConfingDirectory() (string, error) {
+func InitConfingDirectory() (string, string, error) {
 	configDir := getUserDir() + "/.config/tui-deck"
 	if !exists(configDir) {
 		err := os.Mkdir(configDir, os.ModePerm)
 		if err != nil {
-			return "", err
+			return "", configDir, err
 		}
 	}
 	configFile := configDir + "/config.json"
@@ -33,18 +34,18 @@ func InitConfingDirectory() (string, error) {
 		}
 		jsonConfig, err := json.Marshal(configuration)
 		if err != nil {
-			return "", err
+			return "", configDir, err
 		}
 		_, err = create.Write(jsonConfig)
 		if err != nil {
-			return "", err
+			return "", configDir, err
 		}
 		if err != nil {
-			return "", err
+			return "", configDir, err
 		}
-		return create.Name(), nil
+		return create.Name(), configDir, nil
 	}
-	return configFile, nil
+	return configFile, configDir, nil
 
 }
 
@@ -86,4 +87,11 @@ func exists(path string) bool {
 		return false
 	}
 	return false
+}
+
+func CreateFile(p string) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(p), 0770); err != nil {
+		return nil, err
+	}
+	return os.Create(p)
 }

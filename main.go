@@ -1,11 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"os"
 	"strconv"
 	"strings"
+	"tui-deck/deck_db"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
 	"tui-deck/deck_structs"
@@ -17,24 +20,28 @@ var pages = tview.NewPages()
 var fullFlex = tview.NewFlex()
 var mainFlex = tview.NewFlex()
 var footerBar = tview.NewTextView()
+var detailText = tview.NewTextView()
+var detailEditText = tview.NewTextArea()
+var boardList = tview.NewList()
+var editTagsFlex = tview.NewFlex()
+
 var stacks []deck_structs.Stack
 var boards []deck_structs.Board
 var cardsMap = make(map[int]deck_structs.Card)
-var detailText = tview.NewTextView()
-var detailEditText = tview.NewTextArea()
-var primitives = make(map[tview.Primitive]int)
-var primitivesIndexMap = make(map[int]tview.Primitive)
 var editableCard = deck_structs.Card{}
 var currentBoard deck_structs.Board
-var boardList = tview.NewList()
 
-var editTagsFlex = tview.NewFlex()
+var primitives = make(map[tview.Primitive]int)
+var primitivesIndexMap = make(map[int]tview.Primitive)
 
 var configuration utils.Configuration
+var configDir string
+var configFile string
 
 func main() {
 	deck_help.InitHelp()
-	configFile, err := utils.InitConfingDirectory()
+	var err error
+	configFile, configDir, err = utils.InitConfingDirectory()
 	if err != nil {
 		footerBar.SetText(err.Error())
 	}
@@ -44,7 +51,6 @@ func main() {
 		footerBar.SetText(err.Error())
 	}
 
-	//TODO add default board parameter?
 	fmt.Print("Getting boards...\n")
 	boards, err = deck_http.GetBoards(configuration)
 	if err != nil {
@@ -52,8 +58,28 @@ func main() {
 	}
 
 	if len(boards) > 0 {
-		fmt.Print("Getting current board detail...\n")
-		currentBoard, err = deck_http.GetBoardDetail(boards[0].Id, configuration)
+		for i, b := range boards {
+			localBoardFile, _ := os.Open(fmt.Sprintf("%s/db/board-%d.json", configDir, b.Id))
+			decoder := json.NewDecoder(localBoardFile)
+			localBoard := deck_structs.Board{}
+			err = decoder.Decode(&localBoard)
+			if b.Etag != localBoard.Etag {
+				var boardFile *os.File
+				boardFile, err = utils.CreateFile(fmt.Sprintf("%s/db/board-%d.json", configDir, b.Id))
+				if err != nil {
+					panic(err)
+				}
+				marshal, _ := json.Marshal(b)
+				_, err = boardFile.Write(marshal)
+				if err != nil {
+					panic(err)
+				}
+				b.Updated = true
+				boards[i] = b
+			}
+		}
+		fmt.Print("Getting board detail...\n")
+		currentBoard, err = deck_db.GetBoardDetails(boards[0].Id, boards[0].Updated, configDir, configuration)
 		if err != nil {
 			footerBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
 
@@ -62,9 +88,8 @@ func main() {
 	} else {
 		footerBar.SetText("No boards found")
 	}
-
 	fmt.Print("Getting stacks...\n")
-	stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+	stacks, err = deck_db.GetStacks(currentBoard.Id, currentBoard.Updated, configDir, configuration)
 	if err != nil {
 		footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 	}
@@ -351,10 +376,15 @@ func buildSwitchBoard(configuration utils.Configuration) {
 		return event
 	})
 	boardList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
-		currentBoard = boards[index]
+		var err error
+		currentBoard, err = deck_db.GetBoardDetails(boards[index].Id, boards[index].Updated, configDir, configuration)
+		if err != nil {
+			footerBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
+
+		}
 		mainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s", currentBoard.Color, currentBoard.Title))
-		var err error = nil
-		stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
+
+		stacks, err = deck_db.GetStacks(currentBoard.Id, boards[index].Updated, configDir, configuration)
 		if err != nil {
 			footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 		}
