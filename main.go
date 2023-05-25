@@ -33,7 +33,7 @@ var editTagsFlex = tview.NewFlex()
 var configuration utils.Configuration
 
 func main() {
-
+	deck_help.InitHelp()
 	configFile, err := utils.InitConfingDirectory()
 	if err != nil {
 		footerBar.SetText(err.Error())
@@ -96,7 +96,7 @@ func main() {
 			go buildFullFlex(boardList)
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
-			buildHelp()
+			buildHelp(mainFlex, deck_help.HelpMain)
 		}
 
 		return event
@@ -192,7 +192,7 @@ func main() {
 			editTagsFlex.AddItem(labelList, 0, 1, true)
 			editTagsFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEsc {
-					buildFullFlex(mainFlex)
+					buildFullFlex(detailText)
 					return nil
 				}
 				if event.Key() == tcell.KeyTab {
@@ -202,11 +202,17 @@ func main() {
 					} else {
 						app.SetFocus(actualLabelList)
 					}
+				} else if event.Rune() == 63 {
+					// ? deck_help menu
+					buildHelp(editTagsFlex, deck_help.HelpLabels)
 				}
 				return event
 			})
 
 			buildFullFlex(editTagsFlex)
+		} else if event.Rune() == 63 {
+			// ? deck_help menu
+			buildHelp(detailText, deck_help.HelpView)
 		}
 		return event
 	})
@@ -319,6 +325,12 @@ func buildFullFlex(primitive tview.Primitive) {
 	fullFlex.Clear()
 	fullFlex.AddItem(primitive, 0, 10, true)
 	fullFlex.AddItem(footerBar, 0, 1, false)
+	if primitive != mainFlex {
+		footerBar.SetText("Press [yellow]?[white] for help, [yellow]ESC[white] to go back")
+
+	} else {
+		footerBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
+	}
 	app.SetFocus(primitive)
 }
 
@@ -332,6 +344,9 @@ func buildSwitchBoard(configuration utils.Configuration) {
 	boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			go buildFullFlex(mainFlex)
+		} else if event.Rune() == 63 {
+			// ? deck_help menu
+			buildHelp(boardList, deck_help.HelpBoards)
 		}
 		return event
 	})
@@ -348,9 +363,8 @@ func buildSwitchBoard(configuration utils.Configuration) {
 	})
 }
 
-func buildHelp() {
-	deck_help.InitHelp()
-	help := tview.NewFrame(deck_help.HelpMain)
+func buildHelp(primitive tview.Primitive, helpView *tview.TextView) {
+	help := tview.NewFrame(helpView)
 	help.SetBorder(true)
 	help.SetBorderColor(utils.GetColor(configuration.Color))
 	help.SetTitle(deck_help.HelpMain.GetTitle())
@@ -358,21 +372,27 @@ func buildHelp() {
 
 	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
-			go buildFullFlex(mainFlex)
+			go buildFullFlex(primitive)
 			return nil
 		} else if event.Key() == tcell.KeyEnter {
 			switch {
 			case help.GetPrimitive() == deck_help.HelpMain:
 				help.SetTitle(deck_help.HelpView.GetTitle())
 				help.SetPrimitive(deck_help.HelpView)
+				return nil
 			case help.GetPrimitive() == deck_help.HelpView:
 				help.SetTitle(deck_help.HelpEdit.GetTitle())
 				help.SetPrimitive(deck_help.HelpEdit)
+				return nil
 			case help.GetPrimitive() == deck_help.HelpEdit:
 				help.SetTitle(deck_help.HelpLabels.GetTitle())
 				help.SetPrimitive(deck_help.HelpLabels)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpLabels:
+				help.SetTitle(deck_help.HelpBoards.GetTitle())
+				help.SetPrimitive(deck_help.HelpBoards)
+				return nil
+			case help.GetPrimitive() == deck_help.HelpBoards:
 				help.SetTitle(deck_help.HelpMain.GetTitle())
 				help.SetPrimitive(deck_help.HelpMain)
 				return nil
