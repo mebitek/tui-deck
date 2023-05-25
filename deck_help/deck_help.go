@@ -5,11 +5,15 @@ import (
 )
 
 var HelpMain = tview.NewTextView()
+var HelpView = tview.NewTextView()
 var HelpEdit = tview.NewTextView()
+var HelpLabels = tview.NewTextView()
 
 func InitHelp() {
 	HelpMain = getHelp()
-	HelpEdit = getHelp2()
+	HelpView = getHelp2()
+	HelpEdit = getHelp3()
+	HelpLabels = getHelp4()
 }
 
 func getHelp() *tview.TextView {
@@ -34,16 +38,44 @@ func getHelp() *tview.TextView {
 }
 
 func getHelp2() *tview.TextView {
-	HelpEdit = tview.NewTextView().
+	HelpView = tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(`[green]Editing[white]
+		SetText(`[green]View Card[white]
 
 [yellow]e[white]: Edit card Description.
 [yellow]t[white]: Edit card tags.
+[yellow]ESC[white]: Back to main view.
+
+[blue]Press Enter for more help, press Escape to return.`)
+	HelpView.SetTitle(" HELP - View Card ")
+	return HelpView
+}
+func getHelp3() *tview.TextView {
+	HelpEdit = tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(`[green]Edit Card[white]
+
+Type to enter text.
 [yellow]F2[white]: Save card.
 [yellow]ESC[white]: Back to main view.
 
 [blue]Press Enter for more help, press Escape to return.`)
-	HelpEdit.SetTitle(" HELP - Editing ")
+	HelpEdit.SetTitle(" HELP - Edit Card ")
 	return HelpEdit
+}
+
+func getHelp4() *tview.TextView {
+	HelpLabels = tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(`[green]Edit Card Labels[white]
+
+[yellow]Up arrow[white]: Move up.
+[yellow]Down arrow[white]: Move down.
+[yellow]TAB[white]: Switch between card labels and available labels lists.
+[yellow]ENTER[white]: If car label has been selected, delete it. If available label has beel selected, add it to card
+[yellow]ESC[white]: Back to main view.
+
+[blue]Press Enter for more help, press Escape to return.`)
+	HelpLabels.SetTitle(" HELP - Edit Card Labels ")
+	return HelpLabels
 }

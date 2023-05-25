@@ -111,6 +111,8 @@ func main() {
 	footerBar.SetBorder(true)
 	footerBar.SetTitle(" Info ")
 	footerBar.SetBorderColor(utils.GetColor(configuration.Color))
+	footerBar.SetDynamicColors(true)
+	footerBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
 
 	fullFlex.SetDirection(tview.FlexRow)
 	fullFlex.AddItem(mainFlex, 0, 10, true)
@@ -359,13 +361,20 @@ func buildHelp() {
 		} else if event.Key() == tcell.KeyEnter {
 			switch {
 			case help.GetPrimitive() == deck_help.HelpMain:
+				help.SetTitle(deck_help.HelpView.GetTitle())
+				help.SetPrimitive(deck_help.HelpView)
+			case help.GetPrimitive() == deck_help.HelpView:
 				help.SetTitle(deck_help.HelpEdit.GetTitle())
 				help.SetPrimitive(deck_help.HelpEdit)
 			case help.GetPrimitive() == deck_help.HelpEdit:
+				help.SetTitle(deck_help.HelpLabels.GetTitle())
+				help.SetPrimitive(deck_help.HelpLabels)
+				return nil
+			case help.GetPrimitive() == deck_help.HelpLabels:
 				help.SetTitle(deck_help.HelpMain.GetTitle())
 				help.SetPrimitive(deck_help.HelpMain)
+				return nil
 			}
-			return nil
 		}
 		return event
 	})
