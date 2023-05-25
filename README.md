@@ -8,10 +8,10 @@ ___
 
 # features
 
-* switch between boardsmebitek
+* switch between boards
 * list cards
 * edit card description
-* move cards between stacksmebitek
+* move cards between stacks
 * add/remove labels from cards
 * theming
 
