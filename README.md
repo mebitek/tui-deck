@@ -19,7 +19,7 @@ ___
 
 - [ ] add/remove cards
 - [ ] add/edit/delete stacks
-- [ ]add/edit/delete boards
+- [ ] add/edit/delete boards
 - [ ] manage comments
 - [ ] manage attachments
 - [x] improve boot time with local storage data
