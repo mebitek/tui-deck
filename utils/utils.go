@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"github.com/gdamore/tcell/v2"
 	"os"
 )
 
@@ -9,6 +10,7 @@ type Configuration struct {
 	User     string `json:"username"`
 	Password string `json:"password"`
 	Url      string `json:"url"`
+	Color    string `json:"color"`
 }
 
 func InitConfingDirectory() (string, error) {
@@ -22,6 +24,18 @@ func InitConfingDirectory() (string, error) {
 	configFile := configDir + "/config.json"
 	if !exists(configFile) {
 		create, err := os.Create(configFile)
+
+		configuration := Configuration{
+			User:     "",
+			Password: "",
+			Url:      "https://nextcloud.example.com",
+			Color:    "#BF40BF",
+		}
+		jsonConfig, err := json.Marshal(configuration)
+		if err != nil {
+			return "", err
+		}
+		_, err = create.Write(jsonConfig)
 		if err != nil {
 			return "", err
 		}
@@ -49,6 +63,10 @@ func GetConfiguration(configFile string) (Configuration, error) {
 		return Configuration{}, err
 	}
 	return configuration, nil
+}
+
+func GetColor(color string) tcell.Color {
+	return tcell.GetColor(color)
 }
 
 func getUserDir() string {

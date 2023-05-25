@@ -106,11 +106,11 @@ func main() {
 	mainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s ", currentBoard.Color, currentBoard.Title))
 	mainFlex.SetDirection(tview.FlexColumn)
 	mainFlex.SetBorder(true)
-	mainFlex.SetBorderColor(tcell.Color133)
+	mainFlex.SetBorderColor(utils.GetColor(configuration.Color))
 
 	footerBar.SetBorder(true)
 	footerBar.SetTitle(" Info ")
-	footerBar.SetBorderColor(tcell.Color133)
+	footerBar.SetBorderColor(utils.GetColor(configuration.Color))
 
 	fullFlex.SetDirection(tview.FlexRow)
 	fullFlex.AddItem(mainFlex, 0, 10, true)
@@ -183,7 +183,7 @@ func main() {
 
 			editTagsFlex.SetDirection(tview.FlexColumn)
 			editTagsFlex.SetBorder(true)
-			editTagsFlex.SetBorderColor(tcell.Color133)
+			editTagsFlex.SetBorderColor(utils.GetColor(configuration.Color))
 			editTagsFlex.SetTitle(fmt.Sprintf(" %s- EDIT TAGS", detailText.GetTitle()))
 
 			editTagsFlex.AddItem(actualLabelList, 0, 1, true)
@@ -225,10 +225,10 @@ func main() {
 		return event
 	})
 	detailText.SetBorder(true)
-	detailText.SetBorderColor(tcell.Color133)
+	detailText.SetBorderColor(utils.GetColor(configuration.Color))
 
 	detailEditText.SetBorder(true)
-	detailEditText.SetBorderColor(tcell.Color133)
+	detailEditText.SetBorderColor(utils.GetColor(configuration.Color))
 
 	pages.AddPage("Main", fullFlex, true, true)
 
@@ -295,7 +295,7 @@ func buildStacks() {
 		})
 
 		todoList.SetFocusFunc(func() {
-			todoList.SetTitleColor(tcell.Color133)
+			todoList.SetTitleColor(utils.GetColor(configuration.Color))
 		})
 
 		primitives[todoList] = index
@@ -320,7 +320,7 @@ func buildFullFlex(primitive tview.Primitive) {
 
 func buildSwitchBoard(configuration utils.Configuration) {
 	boardList.SetBorder(true)
-	boardList.SetBorderColor(tcell.Color133)
+	boardList.SetBorderColor(utils.GetColor(configuration.Color))
 	boardList.SetTitle("Select Boards")
 	for _, b := range boards {
 		boardList.AddItem(b.Title, "", rune(0), nil)
@@ -348,7 +348,7 @@ func buildHelp() {
 	deck_help.InitHelp()
 	help := tview.NewFrame(deck_help.HelpMain)
 	help.SetBorder(true)
-	help.SetBorderColor(tcell.Color133)
+	help.SetBorderColor(utils.GetColor(configuration.Color))
 	help.SetTitle(deck_help.HelpMain.GetTitle())
 	go buildFullFlex(help)
 

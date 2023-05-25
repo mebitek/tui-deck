@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 	"tui-deck/deck_structs"
 	"tui-deck/utils"
@@ -36,12 +36,14 @@ func httpCall(jsonBody []byte, method string, url string, user string, password 
 }
 
 func basicAuth(username, password string) string {
-	auth := username + ":" + password
+	auth := fmt.Sprintf("%s:%s", username, password)
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
 func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) {
-	call, err := httpCall(nil, http.MethodGet, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards", configuration.User, configuration.Password)
+	call, err := httpCall(nil, http.MethodGet,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards", configuration.Url),
+		configuration.User, configuration.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +57,9 @@ func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) 
 }
 
 func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.Stack, error) {
-	call, err := httpCall(nil, http.MethodGet, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+strconv.Itoa(boardId)+"/stacks", configuration.User, configuration.Password)
+	call, err := httpCall(nil, http.MethodGet,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks", configuration.Url, boardId),
+		configuration.User, configuration.Password)
 	if err != nil {
 		return nil, err
 
@@ -73,10 +77,9 @@ func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.S
 func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
 	body := []byte(jsonBody)
 
-	call, err := httpCall(body, http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
-		strconv.Itoa(boardId)+"/stacks/"+
-		strconv.Itoa(stackId)+"/cards/"+
-		strconv.Itoa(cardId), configuration.User, configuration.Password)
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
+		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -92,7 +95,9 @@ func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configura
 }
 
 func GetBoardDetail(boardId int, configuration utils.Configuration) (deck_structs.Board, error) {
-	call, err := httpCall(nil, http.MethodGet, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+strconv.Itoa(boardId), configuration.User, configuration.Password)
+	call, err := httpCall(nil, http.MethodGet,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d", configuration.Url, boardId),
+		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Board{}, err
 
@@ -110,10 +115,9 @@ func GetBoardDetail(boardId int, configuration utils.Configuration) (deck_struct
 func DeleteLabel(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
 	body := []byte(jsonBody)
 
-	call, err := httpCall(body, http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
-		strconv.Itoa(boardId)+"/stacks/"+
-		strconv.Itoa(stackId)+"/cards/"+
-		strconv.Itoa(cardId)+"/removeLabel", configuration.User, configuration.Password)
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d/removeLabel", configuration.Url, boardId, stackId, cardId),
+		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -131,10 +135,9 @@ func DeleteLabel(boardId int, stackId int, cardId int, jsonBody string, configur
 func AssignLabel(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
 	body := []byte(jsonBody)
 
-	call, err := httpCall(body, http.MethodPut, "https://nextcloud.mebitek.com/index.php/apps/deck/api/v1.0/boards/"+
-		strconv.Itoa(boardId)+"/stacks/"+
-		strconv.Itoa(stackId)+"/cards/"+
-		strconv.Itoa(cardId)+"/assignLabel", configuration.User, configuration.Password)
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d/assignLabel", configuration.Url, boardId, stackId, cardId),
+		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
 
