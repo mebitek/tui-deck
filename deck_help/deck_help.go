@@ -59,7 +59,7 @@ func getHelp3() *tview.TextView {
 
 Type to enter text.
 [yellow]F2[white]: Save card.
-[yellow]ESC[white]: Back to main view.
+[yellow]ESC[white]: Back to card view.
 
 [blue]Press Enter for more help, press Escape to return.`)
 	HelpEdit.SetTitle(" HELP - Edit Card ")
@@ -75,7 +75,7 @@ func getHelp4() *tview.TextView {
 [yellow]Down arrow[white]: Move down.
 [yellow]TAB[white]: Switch between card labels and available labels lists.
 [yellow]ENTER[white]: If car label has been selected, delete it. If available label has been selected, add it to card
-[yellow]ESC[white]: Back to main view.
+[yellow]ESC[white]: Back to card view.
 
 [blue]Press Enter for more help, press Escape to return.`)
 	HelpLabels.SetTitle(" HELP - Edit Card Labels ")
