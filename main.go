@@ -309,13 +309,7 @@ func buildStacks() {
 		})
 
 		for _, card := range s.Cards {
-			var labels = ""
-			for i, label := range card.Labels {
-				labels = fmt.Sprintf("%s[#%s]%s[white]", labels, label.Color, label.Title)
-				if i != len(card.Labels)-1 {
-					labels = fmt.Sprintf("%s, ", labels)
-				}
-			}
+			var labels = buildLabels(card)
 			cardsMap[card.Id] = card
 			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
 		}
@@ -438,35 +432,51 @@ func moveCardToStack(todoList tview.List, key tcell.Key) {
 	cardId := getCardId(name)
 	card := cardsMap[cardId]
 
+	primitive := app.GetFocus()
+	actualPrimitiveIndex := primitives[primitive]
+
 	var position int
+	var operator int
+
 	switch key {
 	case tcell.KeyLeft:
 		if card.StackId == 1 {
 			return
 		}
 		position = card.StackId - 1
+		operator = -1
+
 		break
 	case tcell.KeyRight:
 		if card.StackId == len(stacks) {
 			return
 		}
 		position = card.StackId + 1
+		operator = 1
 		break
 	}
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"stackId": "%d", "title": "%s", "type": "plain", "owner":"%s"}`,
 		position, card.Title, configuration.User), "\n", `\n`)
 
-	_, err := deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
-	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error moving card: %s", err.Error()))
-		return
+	go deck_http.UpdateCard(currentBoard.Id, card.StackId, card.Id, jsonBody, configuration)
+
+	var labels = buildLabels(card)
+	card.StackId = position
+	cardsMap[card.Id] = card
+	destList := getNextFocus(actualPrimitiveIndex + operator).(*tview.List)
+	destList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
+	todoList.RemoveItem(i)
+}
+
+func buildLabels(card deck_structs.Card) string {
+	var labels = ""
+	for i, label := range card.Labels {
+		labels = fmt.Sprintf("%s[#%s]%s[white]", labels, label.Color, label.Title)
+		if i != len(card.Labels)-1 {
+			labels = fmt.Sprintf("%s, ", labels)
+		}
 	}
-	stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
-	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
-		return
-	}
-	buildStacks()
+	return labels
 }
 
 func deleteLabel(jsonBody string) {
