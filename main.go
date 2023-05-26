@@ -16,6 +16,8 @@ import (
 	"tui-deck/utils"
 )
 
+const VERSION = "v0.3.1"
+
 var app = tview.NewApplication()
 var pages = tview.NewPages()
 var fullFlex = tview.NewFlex()
@@ -429,7 +431,7 @@ func buildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 	help := tview.NewFrame(helpView)
 	help.SetBorder(true)
 	help.SetBorderColor(utils.GetColor(configuration.Color))
-	help.SetTitle(deck_help.HelpMain.GetTitle())
+	help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpMain.GetTitle(), VERSION))
 	go buildFullFlex(help)
 
 	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -439,23 +441,23 @@ func buildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 		} else if event.Key() == tcell.KeyEnter {
 			switch {
 			case help.GetPrimitive() == deck_help.HelpMain:
-				help.SetTitle(deck_help.HelpView.GetTitle())
+				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpView.GetTitle(), VERSION))
 				help.SetPrimitive(deck_help.HelpView)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpView:
-				help.SetTitle(deck_help.HelpEdit.GetTitle())
+				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpEdit.GetTitle(), VERSION))
 				help.SetPrimitive(deck_help.HelpEdit)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpEdit:
-				help.SetTitle(deck_help.HelpLabels.GetTitle())
+				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpLabels.GetTitle(), VERSION))
 				help.SetPrimitive(deck_help.HelpLabels)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpLabels:
-				help.SetTitle(deck_help.HelpBoards.GetTitle())
+				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpBoards.GetTitle(), VERSION))
 				help.SetPrimitive(deck_help.HelpBoards)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpBoards:
-				help.SetTitle(deck_help.HelpMain.GetTitle())
+				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpMain.GetTitle(), VERSION))
 				help.SetPrimitive(deck_help.HelpMain)
 				return nil
 			}

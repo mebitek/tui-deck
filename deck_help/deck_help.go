@@ -31,6 +31,8 @@ func getHelp() *tview.TextView {
 [yellow]ENTER[white]: Select card.
 [yellow]s[white]: Switch board.
 [yellow]r[white]: Reload board.
+[yellow]a[white]: Add card to current stack.
+[yellow]d[white]: Delete selected card in current stack.
 [yellow]q[white]: Quit app.
 [yellow]?[white]: Help.
 
