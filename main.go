@@ -431,33 +431,35 @@ func buildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 	help := tview.NewFrame(helpView)
 	help.SetBorder(true)
 	help.SetBorderColor(utils.GetColor(configuration.Color))
-	help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpMain.GetTitle(), VERSION))
+	help.SetTitle(deck_help.HelpMain.GetTitle())
+	footerBar.SetTitle(VERSION)
 	go buildFullFlex(help)
 
 	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
 			go buildFullFlex(primitive)
+			footerBar.SetTitle(" Info ")
 			return nil
 		} else if event.Key() == tcell.KeyEnter {
 			switch {
 			case help.GetPrimitive() == deck_help.HelpMain:
-				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpView.GetTitle(), VERSION))
+				help.SetTitle(deck_help.HelpView.GetTitle())
 				help.SetPrimitive(deck_help.HelpView)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpView:
-				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpEdit.GetTitle(), VERSION))
+				help.SetTitle(deck_help.HelpEdit.GetTitle())
 				help.SetPrimitive(deck_help.HelpEdit)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpEdit:
-				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpLabels.GetTitle(), VERSION))
+				help.SetTitle(deck_help.HelpLabels.GetTitle())
 				help.SetPrimitive(deck_help.HelpLabels)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpLabels:
-				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpBoards.GetTitle(), VERSION))
+				help.SetTitle(deck_help.HelpBoards.GetTitle())
 				help.SetPrimitive(deck_help.HelpBoards)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpBoards:
-				help.SetTitle(fmt.Sprintf("%s - %s", deck_help.HelpMain.GetTitle(), VERSION))
+				help.SetTitle(deck_help.HelpMain.GetTitle())
 				help.SetPrimitive(deck_help.HelpMain)
 				return nil
 			}
