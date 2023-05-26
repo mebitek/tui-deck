@@ -30,6 +30,7 @@ type Card struct {
 	Labels      []Label
 	StackId     int
 	Order       int
+	Type        string
 }
 
 type Label struct {

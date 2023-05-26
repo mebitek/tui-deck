@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -119,6 +120,34 @@ func main() {
 		} else if event.Rune() == 115 {
 			// s -> switch board
 			go buildFullFlex(boardList)
+
+		} else if event.Rune() == 97 {
+			// a -> add card
+			actualList := app.GetFocus().(*tview.List)
+
+			addForm, card := buildAddForm()
+
+			//TODO add due Date input field
+			addForm.AddButton("Save", func() {
+				addCard(*actualList, *card)
+
+			})
+
+			buildFullFlex(addForm)
+
+		} else if event.Rune() == 100 {
+			// d -> delete card
+			actualList := app.GetFocus().(*tview.List)
+			var _, stack, _ = getActualStack(*actualList)
+
+			var currentItemIndex = actualList.GetCurrentItem()
+			mainText, _ := actualList.GetItemText(currentItemIndex)
+			cardId := getCardId(mainText)
+
+			go deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+
+			actualList.RemoveItem(currentItemIndex)
+
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
 			buildHelp(mainFlex, deck_help.HelpMain)
@@ -236,7 +265,7 @@ func main() {
 
 			buildFullFlex(editTagsFlex)
 		} else if event.Rune() == 63 {
-			// ? deck_help menu
+			// ? -> deck_help menu
 			buildHelp(detailText, deck_help.HelpView)
 		}
 		return event
@@ -269,6 +298,15 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func getActualStack(actualList tview.List) (int, deck_structs.Stack, error) {
+	for i, s := range stacks {
+		if s.Title == strings.TrimSpace(actualList.GetTitle()) {
+			return i, s, nil
+		}
+	}
+	return 0, deck_structs.Stack{}, errors.New("not found")
 }
 
 func getNextFocus(index int) tview.Primitive {
@@ -508,7 +546,55 @@ func editCard() {
 	if err != nil {
 		footerBar.SetText(fmt.Sprintf("Error updating card: %s", err.Error()))
 	}
+}
 
+func addCard(actualList tview.List, card deck_structs.Card) {
+	var stackIndex, stack, _ = getActualStack(actualList)
+
+	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "type": "plain", "order": 0}`, card.Title, card.Description)
+	var newCard deck_structs.Card
+	var err error
+	newCard, err = deck_http.AddCard(currentBoard.Id, stack.Id, jsonBody, configuration)
+	if err != nil {
+		footerBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+	}
+
+	actualList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, newCard.Id, newCard.Title), "", rune(0), nil)
+	cardsMap[newCard.Id] = newCard
+	detailText.Clear()
+	editableCard = newCard
+	stacks[stackIndex].Cards = append(stacks[stackIndex].Cards[:1], stacks[stackIndex].Cards[0:]...)
+	stacks[stackIndex].Cards[0] = newCard
+	detailText.SetTitle(fmt.Sprintf(" %s ", newCard.Title))
+	detailText.SetText(formatDescription(newCard.Description))
+	buildFullFlex(detailText)
+}
+
+func buildAddForm() (*tview.Form, *deck_structs.Card) {
+	addForm := tview.NewForm()
+	card := deck_structs.Card{}
+	addForm.SetTitle(" Add Card ")
+	addForm.SetBorder(true)
+	addForm.SetBorderColor(utils.GetColor(configuration.Color))
+	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
+	addForm.SetFieldBackgroundColor(tcell.ColorWhite)
+	addForm.SetFieldTextColor(tcell.ColorBlack)
+	addForm.SetLabelColor(utils.GetColor(configuration.Color))
+	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			buildFullFlex(mainFlex)
+			return nil
+		}
+		return event
+	})
+	addForm.AddInputField("Title", "", 20, nil, func(title string) {
+		card.Title = title
+	})
+	addForm.AddTextArea("Description", "", 60, 10, 300, func(description string) {
+		card.Description = description
+	})
+
+	return addForm, &card
 }
 
 func updateStacks() {

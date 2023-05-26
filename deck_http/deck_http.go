@@ -74,10 +74,48 @@ func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.S
 	return stacks, nil
 }
 
+func AddCard(boardId int, stackId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPost,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards", configuration.Url, boardId, stackId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Card{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var card deck_structs.Card
+
+	err = decoder.Decode(&card)
+	if err != nil {
+		panic(err)
+	}
+	return card, nil
+}
+
 func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Card, error) {
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Card{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var card deck_structs.Card
+
+	err = decoder.Decode(&card)
+	if err != nil {
+		panic(err)
+	}
+	return card, nil
+}
+func DeleteCard(boardId int, stackId int, cardId int, configuration utils.Configuration) (deck_structs.Card, error) {
+
+	call, err := httpCall(nil, http.MethodDelete,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
 		configuration.User, configuration.Password)
 	if err != nil {

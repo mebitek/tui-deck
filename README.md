@@ -17,7 +17,7 @@ ___
 
 # planned features
 
-- [ ] add/remove cards
+- [x] add/remove cards
 - [ ] add/edit/delete stacks
 - [ ] add/edit/delete boards
 - [ ] manage comments
