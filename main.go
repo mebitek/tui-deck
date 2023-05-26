@@ -95,7 +95,7 @@ func main() {
 		footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 	}
 
-	go buildStacks()
+	buildStacks()
 
 	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 113 {
@@ -116,7 +116,7 @@ func main() {
 			if err != nil {
 				footerBar.SetText(fmt.Sprintf("Error reloading stacks: %s", err.Error()))
 			}
-			go buildStacks()
+			buildStacks()
 		} else if event.Rune() == 115 {
 			// s -> switch board
 			go buildFullFlex(boardList)
