@@ -129,7 +129,7 @@ func main() {
 			buildStacks()
 		} else if event.Rune() == 115 {
 			// s -> switch board
-			go buildFullFlex(boardList)
+			buildFullFlex(boardList)
 
 		} else if event.Rune() == 97 {
 			// a -> add card
@@ -209,12 +209,12 @@ func main() {
 	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
 			// ESC -> back to main view
-			go buildFullFlex(mainFlex)
+			buildFullFlex(mainFlex)
 		} else if event.Rune() == 101 {
 			// e -> edit description
 			detailEditText.SetTitle(fmt.Sprintf(" %s- EDIT", detailText.GetTitle()))
 			detailEditText.SetText(formatDescription(editableCard.Description), true)
-			go buildFullFlex(detailEditText)
+			buildFullFlex(detailEditText)
 		} else if event.Rune() == 116 {
 			// t -> tags
 			editTagsFlex.Clear()
@@ -310,7 +310,7 @@ func main() {
 			detailText.Clear()
 			detailText.SetTitle(fmt.Sprintf(" %s ", editableCard.Title))
 			detailText.SetText(deck_markdown.GetMarkDownDescription(formatDescription(editableCard.Description), configuration))
-			go buildFullFlex(detailText)
+			buildFullFlex(detailText)
 		} else if event.Key() == tcell.KeyF2 {
 			editableCard.Description = detailEditText.GetText()
 			go editCard()
@@ -438,7 +438,7 @@ func buildSwitchBoard(configuration utils.Configuration) {
 	}
 	boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			go buildFullFlex(mainFlex)
+			buildFullFlex(mainFlex)
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
 			buildHelp(boardList, deck_help.HelpBoards)
@@ -459,7 +459,7 @@ func buildSwitchBoard(configuration utils.Configuration) {
 			footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 		}
 		buildStacks()
-		go buildFullFlex(mainFlex)
+		buildFullFlex(mainFlex)
 	})
 }
 
