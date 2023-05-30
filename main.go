@@ -469,11 +469,11 @@ func buildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 	help.SetBorderColor(utils.GetColor(configuration.Color))
 	help.SetTitle(deck_help.HelpMain.GetTitle())
 	footerBar.SetTitle(VERSION)
-	go buildFullFlex(help)
+	buildFullFlex(help)
 
 	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
-			go buildFullFlex(primitive)
+			buildFullFlex(primitive)
 			footerBar.SetTitle(" Info ")
 			return nil
 		} else if event.Key() == tcell.KeyEnter {
