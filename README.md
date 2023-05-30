@@ -61,6 +61,7 @@ on first start, the application will create a default config.json file in $HOME/
     | right arrow | move card to next stack     |
     | left arrow  | move card to previous stack |
     | ENTER       | select card                 |
+    | a           | add card                    |
     | s           | switch board                |
     | r           | reload board                |
     | q           | quit app                    |
@@ -98,6 +99,9 @@ on first start, the application will create a default config.json file in $HOME/
     | up arrow   | move up           |
     | down arrow | move down         |
     | ENTER      | select board      |
+    | a          | add board         |
+    | e          | edit board        |
+    | d          | delete board      |
     | ESC        | back to main view |
 
 
