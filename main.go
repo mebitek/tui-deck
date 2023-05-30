@@ -12,11 +12,12 @@ import (
 	"tui-deck/deck_db"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
+	"tui-deck/deck_markdown"
 	"tui-deck/deck_structs"
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.3.2"
+const VERSION = "v0.3.3"
 
 var app = tview.NewApplication()
 var pages = tview.NewPages()
@@ -308,13 +309,13 @@ func main() {
 		if event.Key() == tcell.KeyEscape {
 			detailText.Clear()
 			detailText.SetTitle(fmt.Sprintf(" %s ", editableCard.Title))
-			detailText.SetText(formatDescription(editableCard.Description))
+			detailText.SetText(deck_markdown.GetMarkDownDescription(formatDescription(editableCard.Description), configuration))
 			go buildFullFlex(detailText)
 		} else if event.Key() == tcell.KeyF2 {
 			editableCard.Description = detailEditText.GetText()
 			go editCard()
 			cardsMap[editableCard.Id] = editableCard
-			detailText.SetText(formatDescription(editableCard.Description))
+			detailText.SetText(deck_markdown.GetMarkDownDescription(formatDescription(editableCard.Description), configuration))
 			buildFullFlex(detailText)
 		}
 		return event
@@ -389,7 +390,11 @@ func buildStacks() {
 			cardId := getCardId(name)
 
 			detailText.SetTitle(fmt.Sprintf(" %s ", cardsMap[cardId].Title))
-			detailText.SetText(formatDescription(cardsMap[cardId].Description))
+			detailText.SetDynamicColors(true)
+
+			description := formatDescription(cardsMap[cardId].Description)
+			detailText.SetText(deck_markdown.GetMarkDownDescription(description, configuration))
+			//detailText.SetText(formatDescription(cardsMap[cardId].Description))
 			editableCard = cardsMap[cardId]
 			buildFullFlex(detailText)
 		})
@@ -573,9 +578,13 @@ func assignLabel(jsonBody string) {
 }
 
 func editCard() {
+
+	description := strings.ReplaceAll(editableCard.Description, "\"", "\\\"")
+	title := strings.ReplaceAll(editableCard.Title, "\"", "\\\"")
+
 	jsonBody := strings.ReplaceAll(
 		fmt.Sprintf(`{"description": "%s", "title": "%s", "type": "plain", "owner":"%s"}`,
-			editableCard.Description, editableCard.Title, configuration.User), "\n", `\n`)
+			description, title, configuration.User), "\n", `\n`)
 	var err error
 	_, err = deck_http.UpdateCard(currentBoard.Id, editableCard.StackId, editableCard.Id, jsonBody, configuration)
 	if err != nil {

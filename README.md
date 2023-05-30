@@ -13,7 +13,19 @@ ___
 * edit card description
 * move cards between stacks
 * add/remove labels from cards
+* basic markdown viewer
 * theming
+
+### markdown features
+* headings
+* task list
+* unordered list
+* blockquotes
+* code block
+* bold
+* italic
+* bold + italic
+* inline code 
 
 # planned features
 
