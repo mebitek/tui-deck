@@ -42,7 +42,7 @@ func basicAuth(username, password string) string {
 
 func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) {
 	call, err := httpCall(nil, http.MethodGet,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards", configuration.Url),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards", configuration.Url),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) 
 
 func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.Stack, error) {
 	call, err := httpCall(nil, http.MethodGet,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks", configuration.Url, boardId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks", configuration.Url, boardId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func AddCard(boardId int, stackId int, jsonBody string, configuration utils.Conf
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPost,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards", configuration.Url, boardId, stackId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards", configuration.Url, boardId, stackId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
@@ -98,7 +98,7 @@ func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configura
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPut,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
@@ -116,7 +116,7 @@ func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configura
 func DeleteCard(boardId int, stackId int, cardId int, configuration utils.Configuration) (deck_structs.Card, error) {
 
 	call, err := httpCall(nil, http.MethodDelete,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
@@ -134,7 +134,7 @@ func DeleteCard(boardId int, stackId int, cardId int, configuration utils.Config
 
 func GetBoardDetail(boardId int, configuration utils.Configuration) (deck_structs.Board, error) {
 	call, err := httpCall(nil, http.MethodGet,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d", configuration.Url, boardId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d", configuration.Url, boardId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Board{}, err
@@ -154,7 +154,7 @@ func DeleteLabel(boardId int, stackId int, cardId int, jsonBody string, configur
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPut,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d/removeLabel", configuration.Url, boardId, stackId, cardId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d/removeLabel", configuration.Url, boardId, stackId, cardId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
@@ -174,7 +174,7 @@ func AssignLabel(boardId int, stackId int, cardId int, jsonBody string, configur
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPut,
-		fmt.Sprintf("%s/index.php/apps/deck/api/v1.0/boards/%d/stacks/%d/cards/%d/assignLabel", configuration.Url, boardId, stackId, cardId),
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d/assignLabel", configuration.Url, boardId, stackId, cardId),
 		configuration.User, configuration.Password)
 	if err != nil {
 		return deck_structs.Card{}, err
