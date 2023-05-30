@@ -16,7 +16,7 @@ import (
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.3.1"
+const VERSION = "v0.3.2"
 
 var app = tview.NewApplication()
 var pages = tview.NewPages()
@@ -27,6 +27,7 @@ var detailText = tview.NewTextView()
 var detailEditText = tview.NewTextArea()
 var boardList = tview.NewList()
 var editTagsFlex = tview.NewFlex()
+var modal = tview.NewModal()
 
 var stacks []deck_structs.Stack
 var boards []deck_structs.Board
@@ -100,6 +101,12 @@ func main() {
 	buildStacks()
 
 	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+
+		if modal.HasFocus() {
+			return modal.GetInputCapture()(event)
+
+		}
+
 		if event.Rune() == 113 {
 			// q -> quit app
 			app.Stop()
@@ -146,9 +153,33 @@ func main() {
 			mainText, _ := actualList.GetItemText(currentItemIndex)
 			cardId := getCardId(mainText)
 
-			go deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+			modal.ClearButtons()
+			modal.SetText(fmt.Sprintf("Are you sure to delete card #%d?", cardId))
+			modal.SetBackgroundColor(utils.GetColor(configuration.Color))
 
-			actualList.RemoveItem(currentItemIndex)
+			modal.AddButtons([]string{"Yes", "No"})
+
+			modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyRight || event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyEnter {
+					return event
+				}
+				return nil
+			})
+
+			modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				if buttonLabel == "Yes" {
+					go deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+					actualList.RemoveItem(currentItemIndex)
+					mainFlex.RemoveItem(modal)
+					app.SetFocus(actualList)
+				} else if buttonLabel == "No" {
+					mainFlex.RemoveItem(modal)
+					app.SetFocus(actualList)
+				}
+			})
+
+			mainFlex.AddItem(modal, 0, 0, false)
+			app.SetFocus(modal)
 
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
