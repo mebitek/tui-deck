@@ -53,7 +53,15 @@ func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) 
 	if err != nil {
 		panic(err)
 	}
-	return boards, nil
+
+	filteredBoards := make([]deck_structs.Board, 0)
+	for _, b := range boards {
+		if b.DeletedAt == 0 {
+			filteredBoards = append(filteredBoards, b)
+		}
+	}
+
+	return filteredBoards, nil
 }
 
 func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.Stack, error) {
@@ -188,4 +196,63 @@ func AssignLabel(boardId int, stackId int, cardId int, jsonBody string, configur
 		panic(err)
 	}
 	return card, nil
+}
+
+func AddBoard(jsonBody string, configuration utils.Configuration) (deck_structs.Board, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPost,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards", configuration.Url),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Board{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var board deck_structs.Board
+
+	err = decoder.Decode(&board)
+	if err != nil {
+		panic(err)
+	}
+	return board, nil
+}
+
+func EditBoard(boardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Board, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d", configuration.Url, boardId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Board{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var board deck_structs.Board
+
+	err = decoder.Decode(&board)
+	if err != nil {
+		panic(err)
+	}
+	return board, nil
+}
+
+func DeleteBoard(boardId int, configuration utils.Configuration) (deck_structs.Board, error) {
+
+	call, err := httpCall(nil, http.MethodDelete,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d", configuration.Url, boardId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Board{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var board deck_structs.Board
+
+	err = decoder.Decode(&board)
+	if err != nil {
+		panic(err)
+	}
+	return board, nil
 }

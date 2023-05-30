@@ -7,23 +7,20 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"os"
-	"strconv"
 	"strings"
 	"tui-deck/deck_db"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
 	"tui-deck/deck_markdown"
 	"tui-deck/deck_structs"
+	"tui-deck/deck_ui"
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.3.3"
-
 var app = tview.NewApplication()
 var pages = tview.NewPages()
-var fullFlex = tview.NewFlex()
-var mainFlex = tview.NewFlex()
-var footerBar = tview.NewTextView()
+
+var boardFlex = tview.NewFlex()
 var detailText = tview.NewTextView()
 var detailEditText = tview.NewTextArea()
 var boardList = tview.NewList()
@@ -48,18 +45,18 @@ func main() {
 	var err error
 	configFile, configDir, err = utils.InitConfingDirectory()
 	if err != nil {
-		footerBar.SetText(err.Error())
+		deck_ui.FooterBar.SetText(err.Error())
 	}
 
 	configuration, err = utils.GetConfiguration(configFile)
 	if err != nil {
-		footerBar.SetText(err.Error())
+		deck_ui.FooterBar.SetText(err.Error())
 	}
 
 	fmt.Print("Getting boards...\n")
 	boards, err = deck_http.GetBoards(configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error getting boards: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting boards: %s", err.Error()))
 	}
 
 	if len(boards) > 0 {
@@ -86,26 +83,28 @@ func main() {
 		fmt.Print("Getting board detail...\n")
 		currentBoard, err = deck_db.GetBoardDetails(boards[0].Id, boards[0].Updated, configDir, configuration)
 		if err != nil {
-			footerBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
+			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
 
 		}
 		go buildSwitchBoard(configuration)
 	} else {
-		footerBar.SetText("No boards found")
+		deck_ui.FooterBar.SetText("No boards found")
 	}
+
+	deck_ui.Init(app, configuration, currentBoard)
+
 	fmt.Print("Getting stacks...\n")
 	stacks, err = deck_db.GetStacks(currentBoard.Id, currentBoard.Updated, configDir, configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 	}
 
 	buildStacks()
 
-	mainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	deck_ui.MainFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if modal.HasFocus() {
 			return modal.GetInputCapture()(event)
-
 		}
 
 		if event.Rune() == 113 {
@@ -124,18 +123,20 @@ func main() {
 			// r -> reload stacks
 			stacks, err = deck_http.GetStacks(currentBoard.Id, configuration)
 			if err != nil {
-				footerBar.SetText(fmt.Sprintf("Error reloading stacks: %s", err.Error()))
+				deck_ui.FooterBar.SetText(fmt.Sprintf("Error reloading stacks: %s", err.Error()))
 			}
 			buildStacks()
 		} else if event.Rune() == 115 {
 			// s -> switch board
-			buildFullFlex(boardList)
+			boardFlex.Clear()
+			boardFlex.AddItem(boardList, 0, 1, true)
+			deck_ui.BuildFullFlex(boardFlex)
 
 		} else if event.Rune() == 97 {
 			// a -> add card
 			actualList := app.GetFocus().(*tview.List)
 
-			addForm, card := buildAddForm()
+			addForm, card := deck_ui.BuildAddForm()
 
 			//TODO add due Date input field
 			addForm.AddButton("Save", func() {
@@ -143,7 +144,7 @@ func main() {
 
 			})
 
-			buildFullFlex(addForm)
+			deck_ui.BuildFullFlex(addForm)
 
 		} else if event.Rune() == 100 {
 			// d -> delete card
@@ -152,7 +153,7 @@ func main() {
 
 			var currentItemIndex = actualList.GetCurrentItem()
 			mainText, _ := actualList.GetItemText(currentItemIndex)
-			cardId := getCardId(mainText)
+			cardId := utils.GetId(mainText)
 
 			modal.ClearButtons()
 			modal.SetText(fmt.Sprintf("Are you sure to delete card #%d?", cardId))
@@ -169,52 +170,39 @@ func main() {
 
 			modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 				if buttonLabel == "Yes" {
-					go deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+					go func() {
+						_, _ = deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+					}()
 					actualList.RemoveItem(currentItemIndex)
-					mainFlex.RemoveItem(modal)
+					deck_ui.MainFlex.RemoveItem(modal)
 					app.SetFocus(actualList)
 				} else if buttonLabel == "No" {
-					mainFlex.RemoveItem(modal)
+					deck_ui.MainFlex.RemoveItem(modal)
 					app.SetFocus(actualList)
 				}
 			})
 
-			mainFlex.AddItem(modal, 0, 0, false)
+			deck_ui.MainFlex.AddItem(modal, 0, 0, false)
 			app.SetFocus(modal)
 
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
-			buildHelp(mainFlex, deck_help.HelpMain)
+			deck_ui.BuildHelp(deck_ui.MainFlex, deck_help.HelpMain)
 		}
 
 		return event
 
 	})
 
-	mainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s ", currentBoard.Color, currentBoard.Title))
-	mainFlex.SetDirection(tview.FlexColumn)
-	mainFlex.SetBorder(true)
-	mainFlex.SetBorderColor(utils.GetColor(configuration.Color))
-
-	footerBar.SetBorder(true)
-	footerBar.SetTitle(" Info ")
-	footerBar.SetBorderColor(utils.GetColor(configuration.Color))
-	footerBar.SetDynamicColors(true)
-	footerBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
-
-	fullFlex.SetDirection(tview.FlexRow)
-	fullFlex.AddItem(mainFlex, 0, 10, true)
-	fullFlex.AddItem(footerBar, 0, 1, false)
-
 	detailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
 			// ESC -> back to main view
-			buildFullFlex(mainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex)
 		} else if event.Rune() == 101 {
 			// e -> edit description
 			detailEditText.SetTitle(fmt.Sprintf(" %s- EDIT", detailText.GetTitle()))
-			detailEditText.SetText(formatDescription(editableCard.Description), true)
-			buildFullFlex(detailEditText)
+			detailEditText.SetText(utils.FormatDescription(editableCard.Description), true)
+			deck_ui.BuildFullFlex(detailEditText)
 		} else if event.Rune() == 116 {
 			// t -> tags
 			editTagsFlex.Clear()
@@ -280,7 +268,7 @@ func main() {
 			editTagsFlex.AddItem(labelList, 0, 1, true)
 			editTagsFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEsc {
-					buildFullFlex(detailText)
+					deck_ui.BuildFullFlex(detailText)
 					return nil
 				}
 				if event.Key() == tcell.KeyTab {
@@ -292,15 +280,15 @@ func main() {
 					}
 				} else if event.Rune() == 63 {
 					// ? deck_help menu
-					buildHelp(editTagsFlex, deck_help.HelpLabels)
+					deck_ui.BuildHelp(editTagsFlex, deck_help.HelpLabels)
 				}
 				return event
 			})
 
-			buildFullFlex(editTagsFlex)
+			deck_ui.BuildFullFlex(editTagsFlex)
 		} else if event.Rune() == 63 {
 			// ? -> deck_help menu
-			buildHelp(detailText, deck_help.HelpView)
+			deck_ui.BuildHelp(detailText, deck_help.HelpView)
 		}
 		return event
 	})
@@ -309,14 +297,14 @@ func main() {
 		if event.Key() == tcell.KeyEscape {
 			detailText.Clear()
 			detailText.SetTitle(fmt.Sprintf(" %s ", editableCard.Title))
-			detailText.SetText(deck_markdown.GetMarkDownDescription(formatDescription(editableCard.Description), configuration))
-			buildFullFlex(detailText)
+			detailText.SetText(deck_markdown.GetMarkDownDescription(utils.FormatDescription(editableCard.Description), configuration))
+			deck_ui.BuildFullFlex(detailText)
 		} else if event.Key() == tcell.KeyF2 {
 			editableCard.Description = detailEditText.GetText()
 			go editCard()
 			cardsMap[editableCard.Id] = editableCard
-			detailText.SetText(deck_markdown.GetMarkDownDescription(formatDescription(editableCard.Description), configuration))
-			buildFullFlex(detailText)
+			detailText.SetText(deck_markdown.GetMarkDownDescription(utils.FormatDescription(editableCard.Description), configuration))
+			deck_ui.BuildFullFlex(detailText)
 		}
 		return event
 	})
@@ -326,7 +314,7 @@ func main() {
 	detailEditText.SetBorder(true)
 	detailEditText.SetBorderColor(utils.GetColor(configuration.Color))
 
-	pages.AddPage("Main", fullFlex, true, true)
+	pages.AddPage("Main", deck_ui.FullFlex, true, true)
 
 	if err := app.SetRoot(pages, true).EnableMouse(false).Run(); err != nil {
 		panic(err)
@@ -350,16 +338,8 @@ func getNextFocus(index int) tview.Primitive {
 	return primitivesIndexMap[index]
 }
 
-func getCardId(name string) int {
-	split := strings.Split(name, "-")
-	v := strings.Split(strings.Split(split[0], "]")[1], "[")[0]
-	_ = v
-	cardId, _ := strconv.Atoi(strings.TrimSpace(v[1:]))
-	return cardId
-}
-
 func buildStacks() {
-	mainFlex.Clear()
+	deck_ui.MainFlex.Clear()
 	for index, s := range stacks {
 		todoList := tview.NewList()
 		todoList.SetTitle(fmt.Sprintf(" %s ", s.Title))
@@ -381,22 +361,21 @@ func buildStacks() {
 		})
 
 		for _, card := range s.Cards {
-			var labels = buildLabels(card)
+			var labels = utils.BuildLabels(card)
 			cardsMap[card.Id] = card
 			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
 		}
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
-			cardId := getCardId(name)
+			cardId := utils.GetId(name)
 
 			detailText.SetTitle(fmt.Sprintf(" %s ", cardsMap[cardId].Title))
 			detailText.SetDynamicColors(true)
 
-			description := formatDescription(cardsMap[cardId].Description)
+			description := utils.FormatDescription(cardsMap[cardId].Description)
 			detailText.SetText(deck_markdown.GetMarkDownDescription(description, configuration))
-			//detailText.SetText(formatDescription(cardsMap[cardId].Description))
 			editableCard = cardsMap[cardId]
-			buildFullFlex(detailText)
+			deck_ui.BuildFullFlex(detailText)
 		})
 
 		todoList.SetFocusFunc(func() {
@@ -406,27 +385,10 @@ func buildStacks() {
 		primitives[todoList] = index
 		primitivesIndexMap[index] = todoList
 
-		mainFlex.AddItem(todoList, 0, 1, true)
-		primitive := mainFlex.GetItem(0)
+		deck_ui.MainFlex.AddItem(todoList, 0, 1, true)
+		primitive := deck_ui.MainFlex.GetItem(0)
 		app.SetFocus(primitive)
 	}
-}
-
-func formatDescription(description string) string {
-	return strings.ReplaceAll(description, `\n`, "\n")
-}
-
-func buildFullFlex(primitive tview.Primitive) {
-	fullFlex.Clear()
-	fullFlex.AddItem(primitive, 0, 10, true)
-	fullFlex.AddItem(footerBar, 0, 1, false)
-	if primitive != mainFlex {
-		footerBar.SetText("Press [yellow]?[white] for help, [yellow]ESC[white] to go back")
-
-	} else {
-		footerBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
-	}
-	app.SetFocus(primitive)
 }
 
 func buildSwitchBoard(configuration utils.Configuration) {
@@ -434,14 +396,85 @@ func buildSwitchBoard(configuration utils.Configuration) {
 	boardList.SetBorderColor(utils.GetColor(configuration.Color))
 	boardList.SetTitle("Select Boards")
 	for _, b := range boards {
-		boardList.AddItem(fmt.Sprintf("[#%s]%s", b.Color, b.Title), "", rune(0), nil)
+		boardList.AddItem(fmt.Sprintf("[#%s]#%d - %s", b.Color, b.Id, b.Title), "", rune(0), nil)
 	}
 	boardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			buildFullFlex(mainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+		} else if event.Rune() == 97 {
+			// a -> add board
+			addForm, board := deck_ui.BuildAddBoardForm(deck_structs.Board{})
+			addForm.AddButton("Save", func() {
+				addBoard(*board)
+			})
+
+			deck_ui.BuildFullFlex(addForm)
+		} else if event.Rune() == 101 {
+			// e -> edit board
+			selectedBoardIndex := boardList.GetCurrentItem()
+			text, _ := boardList.GetItemText(selectedBoardIndex)
+
+			boardId := utils.GetId(text)
+			board := deck_structs.Board{}
+			for _, b := range boards {
+				if b.Id == boardId {
+					board = b
+					break
+				}
+			}
+
+			editForm, editedBoard := deck_ui.BuildAddBoardForm(board)
+			editForm.AddButton("Save", func() {
+				go editBoard(*editedBoard)
+				boardList.SetItemText(selectedBoardIndex, fmt.Sprintf("[#%s]#%d - %s", editedBoard.Color, editedBoard.Id, editedBoard.Title), "")
+				for i, b := range boards {
+					if b.Id == editedBoard.Id {
+						boards[i] = *editedBoard
+						break
+					}
+				}
+				deck_ui.BuildFullFlex(boardFlex)
+			})
+			deck_ui.BuildFullFlex(editForm)
+
+		} else if event.Rune() == 100 {
+			// d -> delete board
+			selectedBoardIndex := boardList.GetCurrentItem()
+			text, _ := boardList.GetItemText(selectedBoardIndex)
+			boardId := utils.GetId(text)
+			modal = tview.NewModal()
+			modal.ClearButtons()
+			modal.SetText(fmt.Sprintf("Are you sure to delete bord #%d?", boardId))
+			modal.SetBackgroundColor(utils.GetColor(configuration.Color))
+			modal.AddButtons([]string{"Yes", "No"})
+
+			modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyRight || event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyEnter {
+					return event
+				}
+				return nil
+			})
+
+			modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				if buttonLabel == "Yes" {
+					go func() {
+						_, _ = deck_http.DeleteBoard(boardId, configuration)
+					}()
+					boardList.RemoveItem(selectedBoardIndex)
+					boardFlex.RemoveItem(modal)
+					app.SetFocus(boardList)
+				} else if buttonLabel == "No" {
+					boardFlex.RemoveItem(modal)
+					app.SetFocus(boardList)
+				}
+			})
+
+			boardFlex.AddItem(modal, 0, 0, false)
+			app.SetFocus(modal)
+
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
-			buildHelp(boardList, deck_help.HelpBoards)
+			deck_ui.BuildHelp(boardList, deck_help.HelpBoards)
 		}
 		return event
 	})
@@ -449,65 +482,24 @@ func buildSwitchBoard(configuration utils.Configuration) {
 		var err error
 		currentBoard, err = deck_db.GetBoardDetails(boards[index].Id, boards[index].Updated, configDir, configuration)
 		if err != nil {
-			footerBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
+			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
 
 		}
-		mainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s", currentBoard.Color, currentBoard.Title))
+		deck_ui.MainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s", currentBoard.Color, currentBoard.Title))
 
 		stacks, err = deck_db.GetStacks(currentBoard.Id, boards[index].Updated, configDir, configuration)
 		if err != nil {
-			footerBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
+			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 		}
 		buildStacks()
-		buildFullFlex(mainFlex)
-	})
-}
-
-func buildHelp(primitive tview.Primitive, helpView *tview.TextView) {
-	help := tview.NewFrame(helpView)
-	help.SetBorder(true)
-	help.SetBorderColor(utils.GetColor(configuration.Color))
-	help.SetTitle(deck_help.HelpMain.GetTitle())
-	footerBar.SetTitle(VERSION)
-	buildFullFlex(help)
-
-	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEscape {
-			buildFullFlex(primitive)
-			footerBar.SetTitle(" Info ")
-			return nil
-		} else if event.Key() == tcell.KeyEnter {
-			switch {
-			case help.GetPrimitive() == deck_help.HelpMain:
-				help.SetTitle(deck_help.HelpView.GetTitle())
-				help.SetPrimitive(deck_help.HelpView)
-				return nil
-			case help.GetPrimitive() == deck_help.HelpView:
-				help.SetTitle(deck_help.HelpEdit.GetTitle())
-				help.SetPrimitive(deck_help.HelpEdit)
-				return nil
-			case help.GetPrimitive() == deck_help.HelpEdit:
-				help.SetTitle(deck_help.HelpLabels.GetTitle())
-				help.SetPrimitive(deck_help.HelpLabels)
-				return nil
-			case help.GetPrimitive() == deck_help.HelpLabels:
-				help.SetTitle(deck_help.HelpBoards.GetTitle())
-				help.SetPrimitive(deck_help.HelpBoards)
-				return nil
-			case help.GetPrimitive() == deck_help.HelpBoards:
-				help.SetTitle(deck_help.HelpMain.GetTitle())
-				help.SetPrimitive(deck_help.HelpMain)
-				return nil
-			}
-		}
-		return event
+		deck_ui.BuildFullFlex(deck_ui.MainFlex)
 	})
 }
 
 func moveCardToStack(todoList tview.List, key tcell.Key) {
 	i := todoList.GetCurrentItem()
 	name, _ := todoList.GetItemText(i)
-	cardId := getCardId(name)
+	cardId := utils.GetId(name)
 	card := cardsMap[cardId]
 
 	primitive := app.GetFocus()
@@ -538,7 +530,7 @@ func moveCardToStack(todoList tview.List, key tcell.Key) {
 
 	go updateCard(currentBoard.Id, card.StackId, card.Id, jsonBody)
 
-	var labels = buildLabels(card)
+	var labels = utils.BuildLabels(card)
 	card.StackId = position
 	cardsMap[card.Id] = card
 	destList := getNextFocus(actualPrimitiveIndex + operator).(*tview.List)
@@ -548,37 +540,25 @@ func moveCardToStack(todoList tview.List, key tcell.Key) {
 func updateCard(boardId, stackId int, cardId int, jsonBody string) {
 	_, err := deck_http.UpdateCard(boardId, stackId, cardId, jsonBody, configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error moving card: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error moving card: %s", err.Error()))
 		return
 	}
-}
-
-func buildLabels(card deck_structs.Card) string {
-	var labels = ""
-	for i, label := range card.Labels {
-		labels = fmt.Sprintf("%s[#%s]%s[white]", labels, label.Color, label.Title)
-		if i != len(card.Labels)-1 {
-			labels = fmt.Sprintf("%s, ", labels)
-		}
-	}
-	return labels
 }
 
 func deleteLabel(jsonBody string) {
 	_, err := deck_http.DeleteLabel(currentBoard.Id, editableCard.StackId, editableCard.Id, jsonBody, configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error deleting tag from card: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting tag from card: %s", err.Error()))
 	}
 }
 func assignLabel(jsonBody string) {
 	_, err := deck_http.AssignLabel(currentBoard.Id, editableCard.StackId, editableCard.Id, jsonBody, configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error deleting tag from card: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting tag from card: %s", err.Error()))
 	}
 }
 
 func editCard() {
-
 	description := strings.ReplaceAll(editableCard.Description, "\"", "\\\"")
 	title := strings.ReplaceAll(editableCard.Title, "\"", "\\\"")
 
@@ -588,7 +568,7 @@ func editCard() {
 	var err error
 	_, err = deck_http.UpdateCard(currentBoard.Id, editableCard.StackId, editableCard.Id, jsonBody, configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error updating card: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error updating card: %s", err.Error()))
 	}
 }
 
@@ -600,7 +580,7 @@ func addCard(actualList tview.List, card deck_structs.Card) {
 	var err error
 	newCard, err = deck_http.AddCard(currentBoard.Id, stack.Id, jsonBody, configuration)
 	if err != nil {
-		footerBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
 	}
 
 	actualList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, newCard.Id, newCard.Title), "", rune(0), nil)
@@ -610,35 +590,31 @@ func addCard(actualList tview.List, card deck_structs.Card) {
 	stacks[stackIndex].Cards = append(stacks[stackIndex].Cards[:1], stacks[stackIndex].Cards[0:]...)
 	stacks[stackIndex].Cards[0] = newCard
 	detailText.SetTitle(fmt.Sprintf(" %s ", newCard.Title))
-	detailText.SetText(formatDescription(newCard.Description))
-	buildFullFlex(detailText)
+	detailText.SetText(utils.FormatDescription(newCard.Description))
+	deck_ui.BuildFullFlex(detailText)
 }
 
-func buildAddForm() (*tview.Form, *deck_structs.Card) {
-	addForm := tview.NewForm()
-	card := deck_structs.Card{}
-	addForm.SetTitle(" Add Card ")
-	addForm.SetBorder(true)
-	addForm.SetBorderColor(utils.GetColor(configuration.Color))
-	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
-	addForm.SetFieldBackgroundColor(tcell.ColorWhite)
-	addForm.SetFieldTextColor(tcell.ColorBlack)
-	addForm.SetLabelColor(utils.GetColor(configuration.Color))
-	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			buildFullFlex(mainFlex)
-			return nil
-		}
-		return event
-	})
-	addForm.AddInputField("Title", "", 20, nil, func(title string) {
-		card.Title = title
-	})
-	addForm.AddTextArea("Description", "", 60, 10, 300, func(description string) {
-		card.Description = description
-	})
+func addBoard(board deck_structs.Board) {
+	jsonBody := fmt.Sprintf(`{"title":"%s", "color": "%s"}`, board.Title, board.Color)
+	var newBoard deck_structs.Board
+	var err error
+	newBoard, err = deck_http.AddBoard(jsonBody, configuration)
+	if err != nil {
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+	}
+	boards = append(boards, newBoard)
+	boardList.AddItem(fmt.Sprintf("[#%s]#%d - %s", newBoard.Color, newBoard.Id, newBoard.Title), "", rune(0), nil)
 
-	return addForm, &card
+	deck_ui.BuildFullFlex(boardFlex)
+}
+
+func editBoard(board deck_structs.Board) {
+	jsonBody := fmt.Sprintf(`{"title":"%s", "color": "%s"}`, board.Title, board.Color)
+	var err error
+	_, err = deck_http.EditBoard(board.Id, jsonBody, configuration)
+	if err != nil {
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+	}
 }
 
 func updateStacks() {

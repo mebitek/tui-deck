@@ -91,6 +91,9 @@ func getHelp5() *tview.TextView {
 [yellow]Up arrow[white]: Move up.
 [yellow]Down arrow[white]: Move down.
 [yellow]ENTER[white]: Select board.
+[yellow]a[white]: Add board.
+[yellow]e[white]: Edit board.
+[yellow]d[white]: Delete board.
 [yellow]ESC[white]: Back to main view.
 
 [blue]Press Enter for more help, press Escape to return.`)

@@ -32,7 +32,6 @@ func GetBoardDetails(boardId int, updateBoard bool, configDir string, configurat
 			return deck_structs.Board{}, err
 		}
 	} else {
-		fmt.Printf(" from file...\n")
 		var localBoardFile *os.File
 		localBoardFile, err = os.Open(fmt.Sprintf("%s/db/board-%d.json", configDir, boardId))
 		if err != nil {
@@ -71,7 +70,6 @@ func GetStacks(boardId int, updateBoard bool, configDir string, configuration ut
 			return nil, err
 		}
 	} else {
-		fmt.Printf(" from file...\n")
 		var localStacks *os.File
 		localStacks, err = os.Open(fmt.Sprintf("%s/db/stacks-%d.json", configDir, boardId))
 		if err != nil {

@@ -2,9 +2,13 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"tui-deck/deck_structs"
 )
 
 type Configuration struct {
@@ -94,4 +98,27 @@ func CreateFile(p string) (*os.File, error) {
 		return nil, err
 	}
 	return os.Create(p)
+}
+
+func GetId(name string) int {
+	split := strings.Split(name, "-")
+	v := strings.Split(strings.Split(split[0], "]")[1], "[")[0]
+	_ = v
+	id, _ := strconv.Atoi(strings.TrimSpace(v[1:]))
+	return id
+}
+
+func FormatDescription(description string) string {
+	return strings.ReplaceAll(description, `\n`, "\n")
+}
+
+func BuildLabels(card deck_structs.Card) string {
+	var labels = ""
+	for i, label := range card.Labels {
+		labels = fmt.Sprintf("%s[#%s]%s[white]", labels, label.Color, label.Title)
+		if i != len(card.Labels)-1 {
+			labels = fmt.Sprintf("%s, ", labels)
+		}
+	}
+	return labels
 }

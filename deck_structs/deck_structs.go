@@ -7,13 +7,14 @@ type Owner struct {
 }
 
 type Board struct {
-	Id      int
-	Title   string
-	Owner   Owner
-	Color   string
-	Labels  []Label
-	Etag    string
-	Updated bool
+	Id        int
+	Title     string
+	Owner     Owner
+	Color     string
+	Labels    []Label
+	Etag      string
+	Updated   bool
+	DeletedAt int
 }
 
 type Stack struct {
