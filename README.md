@@ -13,6 +13,7 @@ ___
 * edit card description
 * move cards between stacks
 * add/remove labels from cards
+* add/edit/remove labels from labels
 * basic markdown viewer
 * theming
 
@@ -32,6 +33,7 @@ ___
 - [x] add/remove cards
 - [ ] add/edit/delete stacks
 - [x] add/edit/delete boards
+- [x] add/edit/delete boards label
 - [ ] manage comments
 - [ ] manage attachments
 - [x] improve boot time with local storage data
@@ -102,6 +104,16 @@ on first start, the application will create a default config.json file in $HOME/
     | a          | add board         |
     | e          | edit board        |
     | d          | delete board      |
+    | t          | edit board labels |
     | ESC        | back to main view |
 
+* edit board labels
 
+    | function   | key                   |
+    |------------|-----------------------|
+    | up arrow   | move up               |
+    | down arrow | moe down              |
+    | ENTER      | delete label          |
+    | a          | add label             |
+    | e          | edit label            |
+    | ESC        | back to switch boards |

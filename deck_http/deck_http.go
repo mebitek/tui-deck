@@ -256,3 +256,56 @@ func DeleteBoard(boardId int, configuration utils.Configuration) (deck_structs.B
 	}
 	return board, nil
 }
+
+func DeleteBoardLabel(boardId int, labelId int, configuration utils.Configuration) (int, error) {
+
+	call, err := httpCall(nil, http.MethodDelete,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/labels/%d", configuration.Url, boardId, labelId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return call.StatusCode, err
+
+	}
+
+	return call.StatusCode, nil
+}
+
+func AddBoardLabel(boardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Label, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPost,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/labels", configuration.Url, boardId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Label{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var label deck_structs.Label
+
+	err = decoder.Decode(&label)
+	if err != nil {
+		panic(err)
+	}
+	return label, nil
+}
+
+func EditBoardLabel(boardId int, labelId int, jsonBody string, configuration utils.Configuration) (deck_structs.Label, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/labels/%d", configuration.Url, boardId, labelId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Label{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var label deck_structs.Label
+
+	err = decoder.Decode(&label)
+	if err != nil {
+		panic(err)
+	}
+	return label, nil
+}

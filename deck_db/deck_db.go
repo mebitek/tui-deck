@@ -11,6 +11,10 @@ import (
 
 func GetBoardDetails(boardId int, updateBoard bool, configuration utils.Configuration) (deck_structs.Board, error) {
 	currentBoard := deck_structs.Board{}
+	var fileName = fmt.Sprintf("%s/db/board-detail-%d.json", configuration.ConfigDir, boardId)
+	if !utils.Exists(fileName) {
+		updateBoard = true
+	}
 	var err error
 	if updateBoard {
 		currentBoard, err = deck_http.GetBoardDetail(boardId, configuration)
@@ -18,7 +22,7 @@ func GetBoardDetails(boardId int, updateBoard bool, configuration utils.Configur
 			return deck_structs.Board{}, err
 		}
 		var boardDetailFile *os.File
-		boardDetailFile, err = utils.CreateFile(fmt.Sprintf("%s/db/board-detail-%d.json", configuration.ConfigDir, boardId))
+		boardDetailFile, err = utils.CreateFile(fileName)
 		if err != nil {
 			return deck_structs.Board{}, err
 		}
@@ -31,9 +35,10 @@ func GetBoardDetails(boardId int, updateBoard bool, configuration utils.Configur
 		if err != nil {
 			return deck_structs.Board{}, err
 		}
+		updateBoard = false
 	} else {
 		var localBoardFile *os.File
-		localBoardFile, err = os.Open(fmt.Sprintf("%s/db/board-%d.json", configuration.ConfigDir, boardId))
+		localBoardFile, err = os.Open(fileName)
 		if err != nil {
 			return deck_structs.Board{}, err
 		}
@@ -49,6 +54,10 @@ func GetBoardDetails(boardId int, updateBoard bool, configuration utils.Configur
 
 func GetStacks(boardId int, updateBoard bool, configuration utils.Configuration) ([]deck_structs.Stack, error) {
 	stacks := make([]deck_structs.Stack, 0)
+	var fileName = fmt.Sprintf("%s/db/stacks-%d.json", configuration.ConfigDir, boardId)
+	if !utils.Exists(fileName) {
+		updateBoard = true
+	}
 	var err error
 	if updateBoard {
 		stacks, err = deck_http.GetStacks(boardId, configuration)
@@ -56,7 +65,7 @@ func GetStacks(boardId int, updateBoard bool, configuration utils.Configuration)
 			return nil, err
 		}
 		var stacksFile *os.File
-		stacksFile, err = utils.CreateFile(fmt.Sprintf("%s/db/stacks-%d.json", configuration.ConfigDir, boardId))
+		stacksFile, err = utils.CreateFile(fileName)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +80,7 @@ func GetStacks(boardId int, updateBoard bool, configuration utils.Configuration)
 		}
 	} else {
 		var localStacks *os.File
-		localStacks, err = os.Open(fmt.Sprintf("%s/db/stacks-%d.json", configuration.ConfigDir, boardId))
+		localStacks, err = os.Open(fileName)
 		if err != nil {
 			return nil, err
 		}

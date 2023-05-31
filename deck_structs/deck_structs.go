@@ -1,9 +1,9 @@
 package deck_structs
 
 type Owner struct {
-	PrimaryKey  string
-	Uid         string
-	DisplayName string
+	PrimaryKey  string `json:"primaryKey"`
+	Uid         string `json:"uid"`
+	DisplayName string `json:"displayName"`
 }
 
 type Board struct {
@@ -18,24 +18,24 @@ type Board struct {
 }
 
 type Stack struct {
-	Id    int
-	Title string
-	Order int
-	Cards []Card
+	Id    int    `json:"id"`
+	Title string `json:"title"`
+	Order int    `json:"order"`
+	Cards []Card `json:"cards"`
 }
 
 type Card struct {
-	Id          int
-	Title       string
-	Description string
-	Labels      []Label
-	StackId     int
-	Order       int
-	Type        string
+	Id          int     `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Labels      []Label `json:"labels"`
+	StackId     int     `json:"stackId"`
+	Order       int     `json:"order"`
+	Type        string  `json:"type"`
 }
 
 type Label struct {
-	Id    int
-	Title string
-	Color string
+	Id    int    `json:"id"`
+	Title string `json:"title"`
+	Color string `json:"color"`
 }

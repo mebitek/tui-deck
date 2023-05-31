@@ -109,7 +109,7 @@ func BuildCardViewer() {
 			EditTagsFlex.SetDirection(tview.FlexColumn)
 			EditTagsFlex.SetBorder(true)
 			EditTagsFlex.SetBorderColor(utils.GetColor(configuration.Color))
-			EditTagsFlex.SetTitle(fmt.Sprintf(" %s- EDIT TAGS", DetailText.GetTitle()))
+			EditTagsFlex.SetTitle(fmt.Sprintf(" %s- EDIT TAGS ", DetailText.GetTitle()))
 
 			EditTagsFlex.AddItem(actualLabelList, 0, 1, true)
 			EditTagsFlex.AddItem(labelList, 0, 1, true)

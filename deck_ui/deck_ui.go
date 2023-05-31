@@ -51,36 +51,6 @@ func BuildFullFlex(primitive tview.Primitive) {
 	app.SetFocus(primitive)
 }
 
-func BuildAddBoardForm(b deck_structs.Board) (*tview.Form, *deck_structs.Board) {
-	addForm := tview.NewForm()
-	var board deck_structs.Board = deck_structs.Board{}
-	if b.Id != 0 {
-		board = b
-	}
-	addForm.SetTitle(" Add Board ")
-	addForm.SetBorder(true)
-	addForm.SetBorderColor(utils.GetColor(configuration.Color))
-	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
-	addForm.SetFieldBackgroundColor(tcell.ColorWhite)
-	addForm.SetFieldTextColor(tcell.ColorBlack)
-	addForm.SetLabelColor(utils.GetColor(configuration.Color))
-	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			BuildFullFlex(MainFlex)
-			return nil
-		}
-		return event
-	})
-	addForm.AddInputField("Title", b.Title, 20, nil, func(title string) {
-		board.Title = title
-	})
-	addForm.AddInputField("Color", b.Color, 20, nil, func(color string) {
-		board.Color = color
-	})
-
-	return addForm, &board
-}
-
 func BuildAddForm() (*tview.Form, *deck_structs.Card) {
 	addForm := tview.NewForm()
 	card := deck_structs.Card{}

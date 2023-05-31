@@ -21,14 +21,14 @@ type Configuration struct {
 
 func InitConfingDirectory() (string, error) {
 	configDir := getUserDir() + "/.config/tui-deck"
-	if !exists(configDir) {
+	if !Exists(configDir) {
 		err := os.Mkdir(configDir, os.ModePerm)
 		if err != nil {
 			return "", err
 		}
 	}
 	configFile := configDir + "/config.json"
-	if !exists(configFile) {
+	if !Exists(configFile) {
 		create, err := os.Create(configFile)
 
 		configuration := Configuration{
@@ -84,7 +84,7 @@ func getUserDir() string {
 	return dirname
 }
 
-func exists(path string) bool {
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true
@@ -106,7 +106,7 @@ func GetId(name string) int {
 	split := strings.Split(name, "-")
 	v := strings.Split(strings.Split(split[0], "]")[1], "[")[0]
 	_ = v
-	id, _ := strconv.Atoi(strings.TrimSpace(v[1:]))
+	id, _ := strconv.Atoi(strings.TrimSpace(strings.ReplaceAll(v, "#", "")))
 	return id
 }
 
