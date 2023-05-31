@@ -19,12 +19,12 @@ type Configuration struct {
 	ConfigDir string
 }
 
-func InitConfingDirectory() (string, string, error) {
+func InitConfingDirectory() (string, error) {
 	configDir := getUserDir() + "/.config/tui-deck"
 	if !exists(configDir) {
 		err := os.Mkdir(configDir, os.ModePerm)
 		if err != nil {
-			return "", configDir, err
+			return "", err
 		}
 	}
 	configFile := configDir + "/config.json"
@@ -40,18 +40,18 @@ func InitConfingDirectory() (string, string, error) {
 		}
 		jsonConfig, err := json.Marshal(configuration)
 		if err != nil {
-			return "", configDir, err
+			return "", err
 		}
 		_, err = create.Write(jsonConfig)
 		if err != nil {
-			return "", configDir, err
+			return "", err
 		}
 		if err != nil {
-			return "", configDir, err
+			return "", err
 		}
-		return create.Name(), configDir, nil
+		return create.Name(), nil
 	}
-	return configFile, configDir, nil
+	return configFile, nil
 
 }
 

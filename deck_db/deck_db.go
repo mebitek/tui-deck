@@ -9,7 +9,7 @@ import (
 	"tui-deck/utils"
 )
 
-func GetBoardDetails(boardId int, updateBoard bool, configDir string, configuration utils.Configuration) (deck_structs.Board, error) {
+func GetBoardDetails(boardId int, updateBoard bool, configuration utils.Configuration) (deck_structs.Board, error) {
 	currentBoard := deck_structs.Board{}
 	var err error
 	if updateBoard {
@@ -18,7 +18,7 @@ func GetBoardDetails(boardId int, updateBoard bool, configDir string, configurat
 			return deck_structs.Board{}, err
 		}
 		var boardDetailFile *os.File
-		boardDetailFile, err = utils.CreateFile(fmt.Sprintf("%s/db/board-detail-%d.json", configDir, boardId))
+		boardDetailFile, err = utils.CreateFile(fmt.Sprintf("%s/db/board-detail-%d.json", configuration.ConfigDir, boardId))
 		if err != nil {
 			return deck_structs.Board{}, err
 		}
@@ -33,7 +33,7 @@ func GetBoardDetails(boardId int, updateBoard bool, configDir string, configurat
 		}
 	} else {
 		var localBoardFile *os.File
-		localBoardFile, err = os.Open(fmt.Sprintf("%s/db/board-%d.json", configDir, boardId))
+		localBoardFile, err = os.Open(fmt.Sprintf("%s/db/board-%d.json", configuration.ConfigDir, boardId))
 		if err != nil {
 			return deck_structs.Board{}, err
 		}
@@ -47,7 +47,7 @@ func GetBoardDetails(boardId int, updateBoard bool, configDir string, configurat
 	return currentBoard, nil
 }
 
-func GetStacks(boardId int, updateBoard bool, configDir string, configuration utils.Configuration) ([]deck_structs.Stack, error) {
+func GetStacks(boardId int, updateBoard bool, configuration utils.Configuration) ([]deck_structs.Stack, error) {
 	stacks := make([]deck_structs.Stack, 0)
 	var err error
 	if updateBoard {
@@ -56,7 +56,7 @@ func GetStacks(boardId int, updateBoard bool, configDir string, configuration ut
 			return nil, err
 		}
 		var stacksFile *os.File
-		stacksFile, err = utils.CreateFile(fmt.Sprintf("%s/db/stacks-%d.json", configDir, boardId))
+		stacksFile, err = utils.CreateFile(fmt.Sprintf("%s/db/stacks-%d.json", configuration.ConfigDir, boardId))
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +71,7 @@ func GetStacks(boardId int, updateBoard bool, configDir string, configuration ut
 		}
 	} else {
 		var localStacks *os.File
-		localStacks, err = os.Open(fmt.Sprintf("%s/db/stacks-%d.json", configDir, boardId))
+		localStacks, err = os.Open(fmt.Sprintf("%s/db/stacks-%d.json", configuration.ConfigDir, boardId))
 		if err != nil {
 			return nil, err
 		}

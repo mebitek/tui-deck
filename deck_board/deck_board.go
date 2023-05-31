@@ -123,14 +123,14 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 	})
 	BoardList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
 		var err error
-		CurrentBoard, err = deck_db.GetBoardDetails(Boards[index].Id, Boards[index].Updated, configuration.ConfigDir, configuration)
+		CurrentBoard, err = deck_db.GetBoardDetails(Boards[index].Id, Boards[index].Updated, configuration)
 		if err != nil {
 			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
 
 		}
 		deck_ui.MainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s", CurrentBoard.Color, CurrentBoard.Title))
 
-		deck_stack.Stacks, err = deck_db.GetStacks(CurrentBoard.Id, Boards[index].Updated, configuration.ConfigDir, configuration)
+		deck_stack.Stacks, err = deck_db.GetStacks(CurrentBoard.Id, Boards[index].Updated, configuration)
 		if err != nil {
 			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 		}
