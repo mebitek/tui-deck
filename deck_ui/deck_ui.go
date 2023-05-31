@@ -1,7 +1,6 @@
 package deck_ui
 
 import (
-	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"tui-deck/deck_help"
@@ -11,20 +10,19 @@ import (
 
 const VERSION = "v0.4"
 
-var FullFlex *tview.Flex
-var MainFlex *tview.Flex
-var FooterBar *tview.TextView
+var FullFlex = tview.NewFlex()
+var MainFlex = tview.NewFlex()
+var FooterBar = tview.NewTextView()
+
+var Primitives = make(map[tview.Primitive]int)
+var PrimitivesIndexMap = make(map[int]tview.Primitive)
 var app *tview.Application
 var configuration utils.Configuration
 
-func Init(application *tview.Application, conf utils.Configuration, currentBoard deck_structs.Board) {
+func Init(application *tview.Application, conf utils.Configuration) {
 	app = application
 	configuration = conf
-	FullFlex = tview.NewFlex()
-	MainFlex = tview.NewFlex()
-	FooterBar = tview.NewTextView()
 
-	MainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s ", currentBoard.Color, currentBoard.Title))
 	MainFlex.SetDirection(tview.FlexColumn)
 	MainFlex.SetBorder(true)
 	MainFlex.SetBorderColor(utils.GetColor(configuration.Color))
@@ -149,4 +147,11 @@ func BuildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 		}
 		return event
 	})
+}
+
+func GetNextFocus(index int) tview.Primitive {
+	if index == len(PrimitivesIndexMap) {
+		index = 0
+	}
+	return PrimitivesIndexMap[index]
 }

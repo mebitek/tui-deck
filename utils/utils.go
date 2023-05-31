@@ -12,10 +12,11 @@ import (
 )
 
 type Configuration struct {
-	User     string `json:"username"`
-	Password string `json:"password"`
-	Url      string `json:"url"`
-	Color    string `json:"color"`
+	User      string `json:"username"`
+	Password  string `json:"password"`
+	Url       string `json:"url"`
+	Color     string `json:"color"`
+	ConfigDir string
 }
 
 func InitConfingDirectory() (string, string, error) {
@@ -31,10 +32,11 @@ func InitConfingDirectory() (string, string, error) {
 		create, err := os.Create(configFile)
 
 		configuration := Configuration{
-			User:     "",
-			Password: "",
-			Url:      "https://nextcloud.example.com",
-			Color:    "#BF40BF",
+			User:      "",
+			Password:  "",
+			Url:       "https://nextcloud.example.com",
+			Color:     "#BF40BF",
+			ConfigDir: configDir,
 		}
 		jsonConfig, err := json.Marshal(configuration)
 		if err != nil {
