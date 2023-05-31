@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"strings"
+	"tui-deck/deck_help"
 	"tui-deck/deck_http"
 	"tui-deck/deck_markdown"
 	"tui-deck/deck_stack"
@@ -37,6 +38,142 @@ func Init(application *tview.Application, conf utils.Configuration, board deck_s
 
 	Modal = tview.NewModal()
 	currentBoard = board
+}
+
+func BuildCardViewer() {
+	DetailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			// ESC -> back to main view
+			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+		} else if event.Rune() == 101 {
+			// e -> edit description
+			DetailEditText.SetTitle(fmt.Sprintf(" %s- EDIT", DetailText.GetTitle()))
+			DetailEditText.SetText(utils.FormatDescription(EditableCard.Description), true)
+			deck_ui.BuildFullFlex(DetailEditText)
+		} else if event.Rune() == 116 {
+			// t -> tags
+			EditTagsFlex.Clear()
+			actualLabelList := tview.NewList()
+			actualLabelList.SetBorder(true)
+			actualLabelList.SetTitle(" delete labels ")
+			actualLabelList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyTab {
+					return nil
+				}
+				return event
+			})
+			for _, label := range EditableCard.Labels {
+				actualLabelList.AddItem(fmt.Sprintf("[#%s]%s", label.Color, label.Title), "",
+					rune(0), nil)
+			}
+			actualLabelList.SetSelectedFunc(func(index int, name string, secondName string, rune rune) {
+				label := EditableCard.Labels[index]
+				jsonBody := fmt.Sprintf(`{"labelId": %d}`, label.Id)
+				go DeleteLabel(jsonBody)
+				EditableCard.Labels = append(EditableCard.Labels[:index], EditableCard.Labels[index+1:]...)
+				CardsMap[EditableCard.Id] = EditableCard
+				actualLabelList.RemoveItem(index)
+
+				updateStacks()
+				BuildStacks()
+				app.SetFocus(actualLabelList)
+			})
+
+			labelList := tview.NewList()
+			labelList.SetBorder(true)
+			labelList.SetTitle(" add labels")
+			labelList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyTab {
+					return nil
+				}
+				return event
+			})
+			for _, label := range currentBoard.Labels {
+				labelList.AddItem(fmt.Sprintf("[#%s]%s", label.Color, label.Title), "",
+					rune(0), nil)
+			}
+
+			labelList.SetSelectedFunc(func(index int, name string, secondName string, rune rune) {
+				label := currentBoard.Labels[index]
+				jsonBody := fmt.Sprintf(`{"labelId": %d }`, label.Id)
+				go AssignLabel(jsonBody)
+				EditableCard.Labels = append(EditableCard.Labels, label)
+				CardsMap[EditableCard.Id] = EditableCard
+				actualLabelList.AddItem(fmt.Sprintf("[#%s]%s", label.Color, label.Title), "",
+					rune, nil)
+				updateStacks()
+				BuildStacks()
+				app.SetFocus(labelList)
+			})
+
+			EditTagsFlex.SetDirection(tview.FlexColumn)
+			EditTagsFlex.SetBorder(true)
+			EditTagsFlex.SetBorderColor(utils.GetColor(configuration.Color))
+			EditTagsFlex.SetTitle(fmt.Sprintf(" %s- EDIT TAGS", DetailText.GetTitle()))
+
+			EditTagsFlex.AddItem(actualLabelList, 0, 1, true)
+			EditTagsFlex.AddItem(labelList, 0, 1, true)
+			EditTagsFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyEsc {
+					deck_ui.BuildFullFlex(DetailText)
+					return nil
+				}
+				if event.Key() == tcell.KeyTab {
+					focus := app.GetFocus().(*tview.List)
+					if focus == actualLabelList {
+						app.SetFocus(labelList)
+					} else {
+						app.SetFocus(actualLabelList)
+					}
+				} else if event.Rune() == 63 {
+					// ? deck_help menu
+					deck_ui.BuildHelp(EditTagsFlex, deck_help.HelpLabels)
+				}
+				return event
+			})
+
+			deck_ui.BuildFullFlex(EditTagsFlex)
+		} else if event.Rune() == 63 {
+			// ? -> deck_help menu
+			deck_ui.BuildHelp(DetailText, deck_help.HelpView)
+		}
+		return event
+	})
+
+	DetailEditText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			DetailText.Clear()
+			DetailText.SetTitle(fmt.Sprintf(" %s ", EditableCard.Title))
+			DetailText.SetText(deck_markdown.GetMarkDownDescription(utils.FormatDescription(EditableCard.Description), configuration))
+			deck_ui.BuildFullFlex(DetailText)
+		} else if event.Key() == tcell.KeyF2 {
+			EditableCard.Description = DetailEditText.GetText()
+			go editCard()
+			CardsMap[EditableCard.Id] = EditableCard
+			DetailText.SetText(deck_markdown.GetMarkDownDescription(utils.FormatDescription(EditableCard.Description), configuration))
+			deck_ui.BuildFullFlex(DetailText)
+		}
+		return event
+	})
+	DetailText.SetBorder(true)
+	DetailText.SetBorderColor(utils.GetColor(configuration.Color))
+
+	DetailEditText.SetBorder(true)
+	DetailEditText.SetBorderColor(utils.GetColor(configuration.Color))
+}
+
+func updateStacks() {
+	for i, s := range deck_stack.Stacks {
+		if s.Id == EditableCard.StackId {
+			for j, c := range s.Cards {
+				if c.Id == EditableCard.Id {
+					deck_stack.Stacks[i].Cards[j] = EditableCard
+					break
+				}
+			}
+			break
+		}
+	}
 }
 
 func moveCardToStack(todoList tview.List, key tcell.Key) {
@@ -103,7 +240,7 @@ func AddCard(actualList tview.List, card deck_structs.Card) {
 	deck_ui.BuildFullFlex(DetailText)
 }
 
-func EditCard() {
+func editCard() {
 	description := strings.ReplaceAll(EditableCard.Description, "\"", "\\\"")
 	title := strings.ReplaceAll(EditableCard.Title, "\"", "\\\"")
 
@@ -123,6 +260,38 @@ func updateCard(boardId, stackId int, cardId int, jsonBody string) {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error moving card: %s", err.Error()))
 		return
 	}
+}
+
+func DeleteCard(cardId int, stack deck_structs.Stack, actualList *tview.List, currentItemIndex int) {
+	Modal.ClearButtons()
+	Modal.SetText(fmt.Sprintf("Are you sure to delete card #%d?", cardId))
+	Modal.SetBackgroundColor(utils.GetColor(configuration.Color))
+
+	Modal.AddButtons([]string{"Yes", "No"})
+
+	Modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyRight || event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyEnter {
+			return event
+		}
+		return nil
+	})
+
+	Modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+		if buttonLabel == "Yes" {
+			go func() {
+				_, _ = deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+			}()
+			actualList.RemoveItem(currentItemIndex)
+			deck_ui.MainFlex.RemoveItem(Modal)
+			app.SetFocus(actualList)
+		} else if buttonLabel == "No" {
+			deck_ui.MainFlex.RemoveItem(Modal)
+			app.SetFocus(actualList)
+		}
+	})
+
+	deck_ui.MainFlex.AddItem(Modal, 0, 0, false)
+	app.SetFocus(Modal)
 }
 
 func AssignLabel(jsonBody string) {
