@@ -264,9 +264,7 @@ func DeleteBoardLabel(boardId int, labelId int, configuration utils.Configuratio
 		configuration.User, configuration.Password)
 	if err != nil {
 		return call.StatusCode, err
-
 	}
-
 	return call.StatusCode, nil
 }
 
