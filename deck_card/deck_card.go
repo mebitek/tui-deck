@@ -6,6 +6,7 @@ import (
 	"github.com/rivo/tview"
 	"sort"
 	"strings"
+	"tui-deck/deck_comment"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
 	"tui-deck/deck_markdown"
@@ -51,6 +52,39 @@ func BuildCardViewer() {
 			DetailEditText.SetTitle(fmt.Sprintf(" %s- EDIT", DetailText.GetTitle()))
 			DetailEditText.SetText(utils.FormatDescription(EditableCard.Description), true)
 			deck_ui.BuildFullFlex(DetailEditText)
+
+		} else if event.Rune() == 99 {
+			// c -> comments
+			deck_comment.CommentsList.SetTitle(fmt.Sprintf(" %s- COMMENTS ", DetailText.GetTitle()))
+			deck_comment.CommentsList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyEscape {
+					// ESC -> back to main view
+					deck_ui.BuildFullFlex(DetailText)
+					return nil
+				}
+				if event.Key() == tcell.KeyTAB {
+					return nil
+				}
+				if event.Key() == tcell.KeyRight {
+					return nil
+				}
+				if event.Key() == tcell.KeyLeft {
+					return nil
+				}
+				return event
+			})
+
+			cardId := utils.GetId(DetailText.GetTitle())
+			deck_comment.GetComments(cardId)
+			deck_ui.BuildFullFlex(deck_comment.CommentsList)
+
+			deck_comment.DetailCommentView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyEsc {
+					deck_ui.BuildFullFlex(deck_comment.CommentsList)
+				}
+				return event
+			})
+
 		} else if event.Rune() == 116 {
 			// t -> tags
 			EditTagsFlex.Clear()
@@ -393,7 +427,7 @@ func BuildStacks() {
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
 			cardId := utils.GetId(name)
 
-			DetailText.SetTitle(fmt.Sprintf(" %s ", CardsMap[cardId].Title))
+			DetailText.SetTitle(fmt.Sprintf(" #%d - %s ", CardsMap[cardId].Id, CardsMap[cardId].Title))
 			DetailText.SetDynamicColors(true)
 
 			description := utils.FormatDescription(CardsMap[cardId].Description)

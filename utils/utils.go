@@ -104,9 +104,14 @@ func CreateFile(p string) (*os.File, error) {
 
 func GetId(name string) int {
 	split := strings.Split(name, "-")
-	v := strings.Split(strings.Split(split[0], "]")[1], "[")[0]
-	_ = v
-	id, _ := strconv.Atoi(strings.TrimSpace(strings.ReplaceAll(v, "#", "")))
+	id := 0
+	if strings.Contains(split[0], "]") {
+		v := strings.Split(strings.Split(split[0], "]")[1], "[")[0]
+		_ = v
+		id, _ = strconv.Atoi(strings.TrimSpace(strings.ReplaceAll(v, "#", "")))
+	} else {
+		id, _ = strconv.Atoi(strings.TrimSpace(strings.ReplaceAll(split[0], "#", "")))
+	}
 	return id
 }
 

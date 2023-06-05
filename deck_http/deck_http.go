@@ -12,7 +12,7 @@ import (
 	"tui-deck/utils"
 )
 
-func httpCall(jsonBody []byte, method string, url string, user string, password string) (*http.Response, error) {
+func httpCall(jsonBody []byte, method string, url string, user string, password string, ocs bool) (*http.Response, error) {
 	bodyReader := bytes.NewReader(jsonBody)
 
 	req, err := http.NewRequest(method, url, bodyReader)
@@ -20,7 +20,11 @@ func httpCall(jsonBody []byte, method string, url string, user string, password 
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Add("Authorization", "Basic "+basicAuth(user, password))
+	if ocs {
+		req.Header.Add("OCS-APIRequest", "true")
+	}
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -43,7 +47,7 @@ func basicAuth(username, password string) string {
 func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) {
 	call, err := httpCall(nil, http.MethodGet,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards", configuration.Url),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +71,7 @@ func GetBoards(configuration utils.Configuration) ([]deck_structs.Board, error) 
 func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.Stack, error) {
 	call, err := httpCall(nil, http.MethodGet,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks", configuration.Url, boardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return nil, err
 
@@ -87,7 +91,7 @@ func AddCard(boardId int, stackId int, jsonBody string, configuration utils.Conf
 
 	call, err := httpCall(body, http.MethodPost,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards", configuration.Url, boardId, stackId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -107,7 +111,7 @@ func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configura
 
 	call, err := httpCall(body, http.MethodPut,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -125,7 +129,7 @@ func DeleteCard(boardId int, stackId int, cardId int, configuration utils.Config
 
 	call, err := httpCall(nil, http.MethodDelete,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -143,7 +147,7 @@ func DeleteCard(boardId int, stackId int, cardId int, configuration utils.Config
 func GetBoardDetail(boardId int, configuration utils.Configuration) (deck_structs.Board, error) {
 	call, err := httpCall(nil, http.MethodGet,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d", configuration.Url, boardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Board{}, err
 
@@ -163,7 +167,7 @@ func DeleteLabel(boardId int, stackId int, cardId int, jsonBody string, configur
 
 	call, err := httpCall(body, http.MethodPut,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d/removeLabel", configuration.Url, boardId, stackId, cardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -183,7 +187,7 @@ func AssignLabel(boardId int, stackId int, cardId int, jsonBody string, configur
 
 	call, err := httpCall(body, http.MethodPut,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d/assignLabel", configuration.Url, boardId, stackId, cardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Card{}, err
 
@@ -203,7 +207,7 @@ func AddBoard(jsonBody string, configuration utils.Configuration) (deck_structs.
 
 	call, err := httpCall(body, http.MethodPost,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards", configuration.Url),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Board{}, err
 
@@ -223,7 +227,7 @@ func EditBoard(boardId int, jsonBody string, configuration utils.Configuration) 
 
 	call, err := httpCall(body, http.MethodPut,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d", configuration.Url, boardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Board{}, err
 
@@ -242,7 +246,7 @@ func DeleteBoard(boardId int, configuration utils.Configuration) (deck_structs.B
 
 	call, err := httpCall(nil, http.MethodDelete,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d", configuration.Url, boardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Board{}, err
 
@@ -261,7 +265,7 @@ func DeleteBoardLabel(boardId int, labelId int, configuration utils.Configuratio
 
 	call, err := httpCall(nil, http.MethodDelete,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/labels/%d", configuration.Url, boardId, labelId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return call.StatusCode, err
 	}
@@ -273,7 +277,7 @@ func AddBoardLabel(boardId int, jsonBody string, configuration utils.Configurati
 
 	call, err := httpCall(body, http.MethodPost,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/labels", configuration.Url, boardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Label{}, err
 
@@ -293,7 +297,7 @@ func EditBoardLabel(boardId int, labelId int, jsonBody string, configuration uti
 
 	call, err := httpCall(body, http.MethodPut,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/labels/%d", configuration.Url, boardId, labelId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Label{}, err
 
@@ -313,7 +317,7 @@ func AddStack(boardId int, jsonBody string, configuration utils.Configuration) (
 
 	call, err := httpCall(body, http.MethodPost,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks", configuration.Url, boardId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Stack{}, err
 
@@ -332,7 +336,7 @@ func DeleteStack(boardId int, stackId int, configuration utils.Configuration) (i
 
 	call, err := httpCall(nil, http.MethodDelete,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d", configuration.Url, boardId, stackId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return call.StatusCode, err
 	}
@@ -344,7 +348,7 @@ func EditStack(boardId int, stackId int, jsonBody string, configuration utils.Co
 
 	call, err := httpCall(body, http.MethodPut,
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d", configuration.Url, boardId, stackId),
-		configuration.User, configuration.Password)
+		configuration.User, configuration.Password, false)
 	if err != nil {
 		return deck_structs.Stack{}, err
 
@@ -357,4 +361,26 @@ func EditStack(boardId int, stackId int, jsonBody string, configuration utils.Co
 		panic(err)
 	}
 	return stack, nil
+}
+
+func GetComments(cardId int, configuration utils.Configuration) ([]deck_structs.Comment, error) {
+
+	call, err := httpCall(nil, http.MethodGet,
+		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments", configuration.Url, cardId),
+		configuration.User, configuration.Password, true)
+
+	if err != nil {
+		return nil, err
+
+	}
+
+	var ocs deck_structs.OcsResponse
+
+	decoder := json.NewDecoder(call.Body)
+
+	err = decoder.Decode(&ocs)
+	if err != nil {
+		panic(err)
+	}
+	return ocs.Ocs.Data, nil
 }

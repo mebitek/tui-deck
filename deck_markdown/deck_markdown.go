@@ -42,7 +42,7 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 		result := getStringInBetween(line, "\\*\\*\\*", "\\*\\*\\*")
 		if len(result) > 0 {
 			for _, r := range result {
-				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[::bi]%s[-:-:-]", r[2])))
+				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[::bi]%s[::-]", r[2])))
 			}
 			line = fmt.Sprintf("%s", strings.ReplaceAll(line, "***", ""))
 		}
@@ -50,7 +50,7 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 		result = getStringInBetween(line, "\\*\\*", "\\*\\*")
 		if len(result) > 0 {
 			for _, r := range result {
-				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[::b]%s[-:-:-]", r[2])))
+				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[::b]%s[::-]", r[2])))
 			}
 			line = fmt.Sprintf("%s", strings.ReplaceAll(line, "**", ""))
 		}
@@ -59,7 +59,7 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 		if len(result) > 0 {
 
 			for _, r := range result {
-				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[::i]%s[-:-:-]", r[2])))
+				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[::i]%s[::-]", r[2])))
 			}
 			line = fmt.Sprintf("%s", strings.ReplaceAll(line, "*", ""))
 		}
@@ -67,7 +67,7 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 		result = getStringInBetween(line, "\\`", "\\`")
 		if len(result) > 0 {
 			for _, r := range result {
-				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[#af0000:#4e4e4e:-] %s [-:-:-]", r[2])))
+				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[1], fmt.Sprintf("[#af0000:#4e4e4e:-] %s [::-]", r[2])))
 			}
 			line = fmt.Sprintf("%s", strings.ReplaceAll(line, "`", ""))
 		}

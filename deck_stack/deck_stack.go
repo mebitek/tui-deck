@@ -14,8 +14,8 @@ import (
 )
 
 var Stacks []deck_structs.Stack
-var app *tview.Application
 var Modal *tview.Modal
+var app *tview.Application
 var configuration utils.Configuration
 
 func Init(application *tview.Application, conf utils.Configuration) {

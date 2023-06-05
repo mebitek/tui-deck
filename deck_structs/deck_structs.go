@@ -39,3 +39,36 @@ type Label struct {
 	Title string `json:"title"`
 	Color string `json:"color"`
 }
+
+type OcsResponse struct {
+	Ocs Ocs `json:"ocs"`
+}
+
+type Ocs struct {
+	Meta Meta      `json:"meta"`
+	Data []Comment `json:"data"`
+}
+
+type Meta struct {
+	Status     string `json:"status"`
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
+}
+
+type Comment struct {
+	Id               int       `json:"id"`
+	ObjectId         int       `json:"objectId"`
+	Message          string    `json:"message"`
+	ActorId          string    `json:"actorId"`
+	ActorType        string    `json:"actorType"`
+	ActorDisplayName string    `json:"actorDisplayName"`
+	CreationDateTime string    `json:"creationDateTime"`
+	Mentions         []Mention `json:"mentions"`
+	ReplyTo          *Comment  `json:"replyTo"`
+}
+
+type Mention struct {
+	MentionId          int    `json:"mentionId"`
+	MentionType        string `json:"mentionType"`
+	MentionDisplayName string `json:"mentionDisplayName"`
+}

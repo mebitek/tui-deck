@@ -8,6 +8,7 @@ import (
 	"os"
 	"tui-deck/deck_board"
 	"tui-deck/deck_card"
+	"tui-deck/deck_comment"
 	"tui-deck/deck_db"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
@@ -77,6 +78,7 @@ func main() {
 	fmt.Print("Getting stacks...\n")
 	deck_stack.Init(app, configuration)
 	deck_card.Init(app, configuration, deck_board.CurrentBoard)
+	deck_comment.Init(app, configuration)
 	deck_stack.Stacks, err = deck_db.GetStacks(deck_board.CurrentBoard.Id, deck_board.CurrentBoard.Updated, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
