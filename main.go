@@ -181,7 +181,7 @@ func main() {
 			editForm.AddButton("Save", func() {
 				actualList.SetTitle(fmt.Sprintf("# %s ", editedStack.Title))
 
-				go deck_stack.EditStack(deck_board.CurrentBoard.Id, *editedStack, index)
+				go deck_stack.EditStack(deck_board.CurrentBoard.Id, *editedStack)
 
 				deck_stack.Stacks[index] = *editedStack
 

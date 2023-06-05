@@ -68,7 +68,7 @@ func DeleteStack(stackId int, actualList *tview.List) {
 	app.SetFocus(Modal)
 }
 
-func EditStack(boardId int, stack deck_structs.Stack, index int) {
+func EditStack(boardId int, stack deck_structs.Stack) {
 	description := strings.ReplaceAll(stack.Title, "\"", "\\\"")
 
 	jsonBody := strings.ReplaceAll(
