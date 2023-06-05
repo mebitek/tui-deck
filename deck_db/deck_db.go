@@ -35,7 +35,6 @@ func GetBoardDetails(boardId int, updateBoard bool, configuration utils.Configur
 		if err != nil {
 			return deck_structs.Board{}, err
 		}
-		updateBoard = false
 	} else {
 		var localBoardFile *os.File
 		localBoardFile, err = os.Open(fileName)

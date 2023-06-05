@@ -176,46 +176,48 @@ func updateStacks() {
 	}
 }
 
-func moveCardToStack(todoList tview.List, key tcell.Key) {
+func moveCardToStack(todoList *tview.List, primitive *tview.Primitive, key tcell.Key) {
 	i := todoList.GetCurrentItem()
 	name, _ := todoList.GetItemText(i)
 	cardId := utils.GetId(name)
 	card := CardsMap[cardId]
 
-	primitive := app.GetFocus()
-	actualPrimitiveIndex := deck_ui.Primitives[primitive]
+	actualPrimitiveIndex := deck_ui.Primitives[*primitive]
 
-	var position int
 	var operator int
 
 	switch key {
 	case tcell.KeyLeft:
-		if card.StackId == 1 {
+		if actualPrimitiveIndex == 0 {
 			return
 		}
-		position = card.StackId - 1
 		operator = -1
 
 		break
 	case tcell.KeyRight:
-		if card.StackId == len(deck_stack.Stacks) {
+		if actualPrimitiveIndex == len(deck_stack.Stacks)-1 {
 			return
 		}
-		position = card.StackId + 1
 		operator = 1
 		break
 	}
+
+	nextStack := deck_stack.Stacks[actualPrimitiveIndex+operator]
+
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"stackId": "%d", "title": "%s", "type": "plain", "owner":"%s"}`,
-		position, card.Title, configuration.User), "\n", `\n`)
+		nextStack.Id, card.Title, configuration.User), "\n", `\n`)
 
 	go updateCard(currentBoard.Id, card.StackId, card.Id, jsonBody)
 
 	var labels = utils.BuildLabels(card)
-	card.StackId = position
+	card.StackId = nextStack.Id
 	CardsMap[card.Id] = card
+
 	destList := deck_ui.GetNextFocus(actualPrimitiveIndex + operator).(*tview.List)
-	destList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
 	todoList.RemoveItem(i)
+	destList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
+	destList.SetCurrentItem(0)
+	app.SetFocus(destList)
 }
 
 func AddCard(actualList tview.List, card deck_structs.Card) {
@@ -270,6 +272,10 @@ func DeleteCard(cardId int, stack deck_structs.Stack, actualList *tview.List, cu
 	Modal.AddButtons([]string{"Yes", "No"})
 
 	Modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			deck_ui.MainFlex.RemoveItem(Modal)
+			app.SetFocus(actualList)
+		}
 		if event.Key() == tcell.KeyRight || event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyEnter {
 			return event
 		}
@@ -320,11 +326,11 @@ func BuildStacks() {
 				return nil
 			}
 			if event.Key() == tcell.KeyRight {
-				moveCardToStack(*todoList, tcell.KeyRight)
+				moveStackModal(todoList, tcell.KeyRight)
 				return nil
 			}
 			if event.Key() == tcell.KeyLeft {
-				moveCardToStack(*todoList, tcell.KeyLeft)
+				moveStackModal(todoList, tcell.KeyLeft)
 				return nil
 			}
 			return event
@@ -359,4 +365,45 @@ func BuildStacks() {
 		primitive := deck_ui.MainFlex.GetItem(0)
 		app.SetFocus(primitive)
 	}
+}
+
+func moveStackModal(todoList *tview.List, key tcell.Key) {
+	currentIndex := todoList.GetCurrentItem()
+	currentText, _ := todoList.GetItemText(currentIndex)
+	cardId := utils.GetId(currentText)
+
+	primitive := app.GetFocus()
+
+	Modal.ClearButtons()
+	moveText := "next"
+	if key == tcell.KeyLeft {
+		moveText = "prev"
+	}
+	Modal.SetText(fmt.Sprintf("Are you sure to move card #%d to %s stack??", cardId, moveText))
+	Modal.SetBackgroundColor(utils.GetColor(configuration.Color))
+
+	Modal.AddButtons([]string{"Yes", "No"})
+
+	Modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			deck_ui.MainFlex.RemoveItem(Modal)
+			app.SetFocus(todoList)
+		}
+		if event.Key() == tcell.KeyRight || event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyEnter {
+			return event
+		}
+		return nil
+	})
+
+	Modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+		if buttonLabel == "Yes" {
+			moveCardToStack(todoList, &primitive, key)
+			deck_ui.MainFlex.RemoveItem(Modal)
+		} else if buttonLabel == "No" {
+			deck_ui.MainFlex.RemoveItem(Modal)
+			app.SetFocus(todoList)
+		}
+	})
+	deck_ui.MainFlex.AddItem(Modal, 0, 0, false)
+	app.SetFocus(Modal)
 }

@@ -94,6 +94,10 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 			modal.AddButtons([]string{"Yes", "No"})
 
 			modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyEsc {
+					BoardFlex.RemoveItem(modal)
+					app.SetFocus(BoardList)
+				}
 				if event.Key() == tcell.KeyRight || event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyEnter {
 					return event
 				}
