@@ -307,3 +307,54 @@ func EditBoardLabel(boardId int, labelId int, jsonBody string, configuration uti
 	}
 	return label, nil
 }
+
+func AddStack(boardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Stack, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPost,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks", configuration.Url, boardId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Stack{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var stack deck_structs.Stack
+
+	err = decoder.Decode(&stack)
+	if err != nil {
+		panic(err)
+	}
+	return stack, nil
+}
+
+func DeleteStack(boardId int, stackId int, configuration utils.Configuration) (int, error) {
+
+	call, err := httpCall(nil, http.MethodDelete,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d", configuration.Url, boardId, stackId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return call.StatusCode, err
+	}
+	return call.StatusCode, nil
+}
+
+func EditStack(boardId int, stackId int, jsonBody string, configuration utils.Configuration) (deck_structs.Stack, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d", configuration.Url, boardId, stackId),
+		configuration.User, configuration.Password)
+	if err != nil {
+		return deck_structs.Stack{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var stack deck_structs.Stack
+
+	err = decoder.Decode(&stack)
+	if err != nil {
+		panic(err)
+	}
+	return stack, nil
+}

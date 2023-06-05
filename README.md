@@ -31,7 +31,7 @@ ___
 # planned features
 
 - [x] add/remove cards
-- [ ] add/edit/delete stacks
+- [x] add/edit/delete stacks
 - [x] add/edit/delete boards
 - [x] add/edit/delete boards label
 - [ ] manage comments
@@ -53,7 +53,7 @@ on first start, the application will create a default config.json file in $HOME/
 
 # shortcuts
 
-* main
+ * main
 
     | function    | key                         |
     |-------------|-----------------------------|
@@ -63,9 +63,13 @@ on first start, the application will create a default config.json file in $HOME/
     | right arrow | move card to next stack     |
     | left arrow  | move card to previous stack |
     | ENTER       | select card                 |
-    | a           | add card                    |
     | s           | switch board                |
     | r           | reload board                |
+    | a           | add card                    |
+    | d           | delete card                 |
+    | ctrl+a      | add stack                   |
+    | ctrl+e      | edit stack                  |
+    | ctrl+d      | delete stack                |
     | q           | quit app                    |
     | ?           | help                        |
 

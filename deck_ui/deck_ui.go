@@ -4,11 +4,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"tui-deck/deck_help"
-	"tui-deck/deck_structs"
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.4.2"
+const VERSION = "v0.5"
 
 var FullFlex = tview.NewFlex()
 var MainFlex = tview.NewFlex()
@@ -49,33 +48,6 @@ func BuildFullFlex(primitive tview.Primitive) {
 		FooterBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
 	}
 	app.SetFocus(primitive)
-}
-
-func BuildAddForm() (*tview.Form, *deck_structs.Card) {
-	addForm := tview.NewForm()
-	card := deck_structs.Card{}
-	addForm.SetTitle(" Add Card ")
-	addForm.SetBorder(true)
-	addForm.SetBorderColor(utils.GetColor(configuration.Color))
-	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
-	addForm.SetFieldBackgroundColor(tcell.ColorWhite)
-	addForm.SetFieldTextColor(tcell.ColorBlack)
-	addForm.SetLabelColor(utils.GetColor(configuration.Color))
-	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			BuildFullFlex(MainFlex)
-			return nil
-		}
-		return event
-	})
-	addForm.AddInputField("Title", "", 20, nil, func(title string) {
-		card.Title = title
-	})
-	addForm.AddTextArea("Description", "", 60, 10, 300, func(description string) {
-		card.Description = description
-	})
-
-	return addForm, &card
 }
 
 func BuildHelp(primitive tview.Primitive, helpView *tview.TextView) {

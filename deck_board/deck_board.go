@@ -107,7 +107,10 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 			modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 				if buttonLabel == "Yes" {
 					go func() {
-						_, _ = deck_http.DeleteBoard(boardId, configuration)
+						_, err := deck_http.DeleteBoard(boardId, configuration)
+						if err != nil {
+							deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleteing board: %s", err.Error()))
+						}
 					}()
 					BoardList.RemoveItem(selectedBoardIndex)
 					BoardFlex.RemoveItem(modal)
@@ -310,7 +313,7 @@ func editLabel(boardId int, label deck_structs.Label) {
 
 func buildAddLabelForm(l deck_structs.Label) (*tview.Form, *deck_structs.Label) {
 	addForm := tview.NewForm()
-	var label deck_structs.Label = deck_structs.Label{}
+	var label = deck_structs.Label{}
 	var title = " Add Label "
 	if l.Id != 0 {
 		label = l

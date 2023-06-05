@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"sort"
 	"strings"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
@@ -220,7 +221,34 @@ func moveCardToStack(todoList *tview.List, primitive *tview.Primitive, key tcell
 	app.SetFocus(destList)
 }
 
-func AddCard(actualList tview.List, card deck_structs.Card) {
+func BuildAddForm() (*tview.Form, *deck_structs.Card) {
+	addForm := tview.NewForm()
+	card := deck_structs.Card{}
+	addForm.SetTitle(" Add Card ")
+	addForm.SetBorder(true)
+	addForm.SetBorderColor(utils.GetColor(configuration.Color))
+	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
+	addForm.SetFieldBackgroundColor(tcell.ColorWhite)
+	addForm.SetFieldTextColor(tcell.ColorBlack)
+	addForm.SetLabelColor(utils.GetColor(configuration.Color))
+	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			return nil
+		}
+		return event
+	})
+	addForm.AddInputField("Title", "", 20, nil, func(title string) {
+		card.Title = title
+	})
+	addForm.AddTextArea("Description", "", 60, 10, 300, func(description string) {
+		card.Description = description
+	})
+
+	return addForm, &card
+}
+
+func AddCard(actualList *tview.List, card deck_structs.Card) {
 	var stackIndex, stack, _ = deck_stack.GetActualStack(actualList)
 
 	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "type": "plain", "order": 0}`, card.Title, card.Description)
@@ -235,8 +263,12 @@ func AddCard(actualList tview.List, card deck_structs.Card) {
 	CardsMap[newCard.Id] = newCard
 	DetailText.Clear()
 	EditableCard = newCard
-	deck_stack.Stacks[stackIndex].Cards = append(deck_stack.Stacks[stackIndex].Cards[:1], deck_stack.Stacks[stackIndex].Cards[0:]...)
-	deck_stack.Stacks[stackIndex].Cards[0] = newCard
+	if deck_stack.Stacks[stackIndex].Cards == nil || len(deck_stack.Stacks[stackIndex].Cards) == 0 {
+		deck_stack.Stacks[stackIndex].Cards = append(deck_stack.Stacks[stackIndex].Cards, newCard)
+	} else {
+		deck_stack.Stacks[stackIndex].Cards = append(deck_stack.Stacks[stackIndex].Cards[:1], deck_stack.Stacks[stackIndex].Cards[0:]...)
+		deck_stack.Stacks[stackIndex].Cards[0] = newCard
+	}
 	DetailText.SetTitle(fmt.Sprintf(" %s ", newCard.Title))
 	DetailText.SetText(utils.FormatDescription(newCard.Description))
 	deck_ui.BuildFullFlex(DetailText)
@@ -285,7 +317,10 @@ func DeleteCard(cardId int, stack deck_structs.Stack, actualList *tview.List, cu
 	Modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 		if buttonLabel == "Yes" {
 			go func() {
-				_, _ = deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+				_, err := deck_http.DeleteCard(currentBoard.Id, stack.Id, cardId, configuration)
+				if err != nil {
+					deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting card: %s", err.Error()))
+				}
 			}()
 			actualList.RemoveItem(currentItemIndex)
 			deck_ui.MainFlex.RemoveItem(Modal)
@@ -316,9 +351,16 @@ func DeleteLabel(jsonBody string) {
 
 func BuildStacks() {
 	deck_ui.MainFlex.Clear()
+	deck_ui.Primitives = make(map[tview.Primitive]int)
+	deck_ui.PrimitivesIndexMap = make(map[int]tview.Primitive)
+
+	sort.Slice(deck_stack.Stacks, func(i, j int) bool {
+		return deck_stack.Stacks[i].Order < deck_stack.Stacks[j].Order
+	})
+
 	for index, s := range deck_stack.Stacks {
 		todoList := tview.NewList()
-		todoList.SetTitle(fmt.Sprintf(" %s ", s.Title))
+		todoList.SetTitle(fmt.Sprintf("# %s ", s.Title))
 		todoList.SetBorder(true)
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -326,10 +368,16 @@ func BuildStacks() {
 				return nil
 			}
 			if event.Key() == tcell.KeyRight {
+				if todoList.GetItemCount() == 0 {
+					return nil
+				}
 				moveStackModal(todoList, tcell.KeyRight)
 				return nil
 			}
 			if event.Key() == tcell.KeyLeft {
+				if todoList.GetItemCount() == 0 {
+					return nil
+				}
 				moveStackModal(todoList, tcell.KeyLeft)
 				return nil
 			}

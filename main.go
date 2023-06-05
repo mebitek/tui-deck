@@ -109,21 +109,87 @@ func main() {
 			deck_ui.BuildFullFlex(deck_board.BoardFlex)
 		} else if event.Rune() == 97 {
 			// a -> add card
+			if len(deck_stack.Stacks) == 0 {
+				return nil
+			}
 			actualList := app.GetFocus().(*tview.List)
-			addForm, card := deck_ui.BuildAddForm()
+			addForm, card := deck_card.BuildAddForm()
 			//TODO add due Date input field
 			addForm.AddButton("Save", func() {
-				deck_card.AddCard(*actualList, *card)
+				deck_card.AddCard(actualList, *card)
 			})
 			deck_ui.BuildFullFlex(addForm)
 		} else if event.Rune() == 100 {
+			if len(deck_stack.Stacks) == 0 {
+				return nil
+			}
 			// d -> delete card
 			actualList := app.GetFocus().(*tview.List)
-			var _, stack, _ = deck_stack.GetActualStack(*actualList)
+			var _, stack, _ = deck_stack.GetActualStack(actualList)
 			var currentItemIndex = actualList.GetCurrentItem()
 			mainText, _ := actualList.GetItemText(currentItemIndex)
 			cardId := utils.GetId(mainText)
 			deck_card.DeleteCard(cardId, stack, actualList, currentItemIndex)
+
+		} else if event.Key() == tcell.KeyCtrlA {
+			// ctrl + a -> add stack
+			addForm, stack := deck_stack.BuildAddForm(deck_structs.Stack{})
+			addForm.AddButton("Save", func() {
+				deck_stack.AddStack(deck_board.CurrentBoard.Id, *stack)
+				deck_card.BuildStacks()
+				deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			})
+			deck_ui.BuildFullFlex(addForm)
+
+		} else if event.Key() == tcell.KeyCtrlD {
+			// ctrl + d -> delete stack
+			if len(deck_stack.Stacks) == 0 {
+				return nil
+			}
+
+			actualList := app.GetFocus().(*tview.List)
+			index := deck_ui.Primitives[app.GetFocus()]
+			currentStack := deck_stack.Stacks[index]
+
+			deck_stack.DeleteStack(currentStack.Id, actualList)
+			deck_stack.Modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				if buttonLabel == "Yes" {
+					go func() {
+						_, err = deck_http.DeleteStack(deck_board.CurrentBoard.Id, currentStack.Id, configuration)
+						if err != nil {
+							deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting stack: %s", err.Error()))
+						}
+					}()
+					deck_ui.MainFlex.RemoveItem(deck_stack.Modal)
+					deck_ui.MainFlex.RemoveItem(actualList)
+					deck_stack.Stacks = append(deck_stack.Stacks[:index], deck_stack.Stacks[index+1:]...)
+					deck_card.BuildStacks()
+					deck_ui.BuildFullFlex(deck_ui.MainFlex)
+				} else if buttonLabel == "No" {
+					deck_ui.MainFlex.RemoveItem(deck_stack.Modal)
+					app.SetFocus(actualList)
+				}
+			})
+
+		} else if event.Key() == tcell.KeyCtrlE {
+			// ctrl + e -> edit stack
+			actualList := app.GetFocus().(*tview.List)
+
+			index := deck_ui.Primitives[app.GetFocus()]
+			currentStack := deck_stack.Stacks[index]
+			editForm, editedStack := deck_stack.BuildAddForm(currentStack)
+			editForm.AddButton("Save", func() {
+				actualList.SetTitle(fmt.Sprintf("# %s ", editedStack.Title))
+
+				go deck_stack.EditStack(deck_board.CurrentBoard.Id, *editedStack, index)
+
+				deck_stack.Stacks[index] = *editedStack
+
+				deck_card.BuildStacks()
+				deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			})
+			deck_ui.BuildFullFlex(editForm)
+
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
 			deck_ui.BuildHelp(deck_ui.MainFlex, deck_help.HelpMain)
