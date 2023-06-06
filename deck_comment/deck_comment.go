@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sort"
+	"strings"
 	"time"
 	"tui-deck/deck_http"
 	"tui-deck/deck_markdown"
@@ -14,6 +15,8 @@ import (
 )
 
 var Comments []deck_structs.Comment
+
+var CommentsMap = make(map[int]deck_structs.Comment)
 var CommentTree *tview.TreeView
 var app *tview.Application
 var Modal *tview.Modal
@@ -39,6 +42,8 @@ func Init(application *tview.Application, conf utils.Configuration) {
 
 func GetComments(cardId int) {
 
+	CommentTreeStructMap = make(map[int]CommentStruct)
+
 	var err error
 	Comments, err = deck_http.GetComments(cardId, configuration)
 	if err != nil {
@@ -47,6 +52,7 @@ func GetComments(cardId int) {
 
 	replies := make(map[int]deck_structs.Comment)
 	for _, c := range Comments {
+		CommentsMap[c.Id] = c
 		cs := CommentStruct{
 			Comment: c,
 		}
@@ -130,10 +136,15 @@ func getCreationDate(comment deck_structs.Comment) string {
 	return parse.Format("15:04:05 - 2006-01-02")
 }
 
-func BuildAddForm() (*tview.Form, *deck_structs.Comment) {
+func BuildAddForm(c deck_structs.Comment) (*tview.Form, *deck_structs.Comment) {
 	addForm := tview.NewForm()
-	comment := deck_structs.Comment{}
-	addForm.SetTitle(" Add Card ")
+	var comment = deck_structs.Comment{}
+	var title = " Add Comment "
+	if c.Id != 0 {
+		comment = c
+		title = " Edit Comment"
+	}
+	addForm.SetTitle(title)
 	addForm.SetBorder(true)
 	addForm.SetBorderColor(utils.GetColor(configuration.Color))
 	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
@@ -142,12 +153,12 @@ func BuildAddForm() (*tview.Form, *deck_structs.Comment) {
 	addForm.SetLabelColor(utils.GetColor(configuration.Color))
 	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			deck_ui.BuildFullFlex(CommentTree)
 			return nil
 		}
 		return event
 	})
-	addForm.AddTextArea("Message", "", 60, 10, 300, func(message string) {
+	addForm.AddTextArea("Message", c.Message, 60, 10, 300, func(message string) {
 		comment.Message = message
 	})
 
@@ -155,7 +166,7 @@ func BuildAddForm() (*tview.Form, *deck_structs.Comment) {
 }
 
 func AddComment(cardId int, comment deck_structs.Comment) {
-	jsonBody := fmt.Sprintf(`{"message":"%s" }`, comment.Message)
+	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s" }`, comment.Message), "\n", `\n`)
 	var newComment deck_structs.Comment
 	var err error
 	newComment, err = deck_http.AddComment(cardId, jsonBody, configuration)
@@ -165,8 +176,34 @@ func AddComment(cardId int, comment deck_structs.Comment) {
 
 	CommentTreeStructMap[newComment.Id] = CommentStruct{Comment: newComment}
 }
+func EditComment(cardId int, comment deck_structs.Comment) {
+	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s" }`, comment.Message), "\n", `\n`)
+	var err error
+	go func() {
+		_, err = deck_http.EditComment(cardId, comment.Id, jsonBody, configuration)
+	}()
+	if err != nil {
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error editing new comment: %s", err.Error()))
+	}
+
+	_, ok := CommentTreeStructMap[comment.Id]
+	if ok {
+		CommentTreeStructMap[comment.Id] = CommentStruct{Comment: comment, Replies: CommentTreeStructMap[comment.Id].Replies}
+	} else {
+		for k, c := range CommentTreeStructMap {
+			for i, r := range c.Replies {
+				if r.Comment.Id == comment.Id {
+					c.Replies[i] = CommentStruct{Comment: comment, Replies: c.Replies[i].Replies}
+					CommentTreeStructMap[k] = CommentStruct{Comment: CommentTreeStructMap[k].Comment, Replies: c.Replies}
+					break
+				}
+			}
+		}
+	}
+
+}
 func ReplyComment(cardId int, parentId int, comment deck_structs.Comment) {
-	jsonBody := fmt.Sprintf(`{"message":"%s", "parentId": %d }`, comment.Message, parentId)
+	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s", "parentId": %d }`, comment.Message, parentId), "\n", `\n`)
 	var newComment deck_structs.Comment
 	var err error
 	newComment, err = deck_http.AddComment(cardId, jsonBody, configuration)
@@ -210,6 +247,7 @@ func DeleteComment(cardId int, commentId int) {
 			if ok {
 				delete(CommentTreeStructMap, commentId)
 			} else {
+				// TODO fix this with recursion
 				for k, c := range CommentTreeStructMap {
 					for i, r := range c.Replies {
 						if r.Comment.Id == commentId {

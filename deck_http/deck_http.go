@@ -404,6 +404,25 @@ func AddComment(cardId int, jsonBody string, configuration utils.Configuration) 
 	return ocs.Ocs.Data, nil
 }
 
+func EditComment(cardId int, commentid int, jsonBody string, configuration utils.Configuration) (deck_structs.Comment, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments/%d", configuration.Url, cardId, commentid),
+		configuration.User, configuration.Password, true)
+	if err != nil {
+		return deck_structs.Comment{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var ocs deck_structs.OcsResponseSingle
+	err = decoder.Decode(&ocs)
+	if err != nil {
+		panic(err)
+	}
+	return ocs.Ocs.Data, nil
+}
+
 func DeleteComment(cardId int, commentId int, configuration utils.Configuration) (int, error) {
 	call, err := httpCall(nil, http.MethodDelete,
 		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments/%d", configuration.Url, cardId, commentId),
