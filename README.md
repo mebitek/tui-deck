@@ -34,7 +34,7 @@ ___
 - [x] add/edit/delete stacks
 - [x] add/edit/delete boards
 - [x] add/edit/delete boards label
-- [ ] manage comments
+- [x] manage comments
 - [ ] manage attachments
 - [x] improve boot time with local storage data
 
@@ -79,6 +79,7 @@ on first start, the application will create a default config.json file in $HOME/
     |----------|-----------------------|
     | e        | edit card description |
     | t        | edit card labels      |
+    | c        | view comments         |
     | ESC      | back to main view     |
 
 *  edit card
@@ -97,6 +98,18 @@ on first start, the application will create a default config.json file in $HOME/
     | TAB        | switch between card labels and available board labels lists                                      |
     | ENTER      | if card label has been selected, delete it. if available label has been selected, add it to card |
     | ESC        | back to view card                                                                                |
+
+* view comments 
+
+    | function   | key                       |
+    |------------|---------------------------|
+    | up arrow   | move up                   |
+    | down arrow | move down                 |
+    | a          | add comment               |
+    | r          | reply to selected comment |
+    | e          | edit comment              |
+    | d          | delete selected comment   | 
+    | ESC        | back to view card         |
 
 * switch boards
 

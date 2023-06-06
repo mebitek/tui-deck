@@ -98,6 +98,9 @@ func BuildCardViewer() {
 					})
 					deck_ui.BuildFullFlex(addForm)
 					return nil
+				} else if event.Rune() == 63 {
+					// ? -> help
+					deck_ui.BuildHelp(deck_comment.CommentTree, deck_help.HelpComments)
 				}
 				return event
 			})

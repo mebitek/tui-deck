@@ -9,6 +9,7 @@ var HelpView = tview.NewTextView()
 var HelpEdit = tview.NewTextView()
 var HelpLabels = tview.NewTextView()
 var HelpBoards = tview.NewTextView()
+var HelpComments = tview.NewTextView()
 
 func InitHelp() {
 	HelpMain = getHelp()
@@ -16,6 +17,7 @@ func InitHelp() {
 	HelpEdit = getHelp3()
 	HelpLabels = getHelp4()
 	HelpBoards = getHelp5()
+	HelpComments = getHelp6()
 }
 
 func getHelp() *tview.TextView {
@@ -51,6 +53,7 @@ func getHelp2() *tview.TextView {
 
 [yellow]e[white]: Edit card Description.
 [yellow]t[white]: Edit card tags.
+[yellow]c[white]: View comments.
 [yellow]ESC[white]: Back to main view.
 
 [blue]Press Enter for more help, press Escape to return.`)
@@ -102,4 +105,21 @@ func getHelp5() *tview.TextView {
 [blue]Press Enter for more help, press Escape to return.`)
 	HelpBoards.SetTitle(" HELP - Switch Boards ")
 	return HelpBoards
+}
+func getHelp6() *tview.TextView {
+	HelpComments = tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(`[green]View Comments[white]
+
+[yellow]Up arrow[white]: Move up.
+[yellow]Down arrow[white]: Move down.
+[yellow]a[white]: Add comment.
+[yellow]r[white]: Reply comment.
+[yellow]e[white]: Edit comment.
+[yellow]d[white]: Delete comment.
+[yellow]ESC[white]: Back to card view.
+
+[blue]Press Enter for more help, press Escape to return.`)
+	HelpComments.SetTitle(" HELP - View Comments ")
+	return HelpComments
 }

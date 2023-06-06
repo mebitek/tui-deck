@@ -54,7 +54,7 @@ func BuildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 	help := tview.NewFrame(helpView)
 	help.SetBorder(true)
 	help.SetBorderColor(utils.GetColor(configuration.Color))
-	help.SetTitle(deck_help.HelpMain.GetTitle())
+	help.SetTitle(helpView.GetTitle())
 	FooterBar.SetTitle(VERSION)
 	BuildFullFlex(help)
 
@@ -78,6 +78,10 @@ func BuildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 				help.SetPrimitive(deck_help.HelpLabels)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpLabels:
+				help.SetTitle(deck_help.HelpComments.GetTitle())
+				help.SetPrimitive(deck_help.HelpComments)
+				return nil
+			case help.GetPrimitive() == deck_help.HelpComments:
 				help.SetTitle(deck_help.HelpBoards.GetTitle())
 				help.SetPrimitive(deck_help.HelpBoards)
 				return nil
