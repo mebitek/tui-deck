@@ -44,9 +44,17 @@ type OcsResponse struct {
 	Ocs Ocs `json:"ocs"`
 }
 
+type OcsResponseSingle struct {
+	Ocs OcsSingle `json:"ocs"`
+}
+
 type Ocs struct {
 	Meta Meta      `json:"meta"`
 	Data []Comment `json:"data"`
+}
+type OcsSingle struct {
+	Meta Meta    `json:"meta"`
+	Data Comment `json:"data"`
 }
 
 type Meta struct {

@@ -384,3 +384,32 @@ func GetComments(cardId int, configuration utils.Configuration) ([]deck_structs.
 	}
 	return ocs.Ocs.Data, nil
 }
+
+func AddComment(cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.Comment, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPost,
+		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments", configuration.Url, cardId),
+		configuration.User, configuration.Password, true)
+	if err != nil {
+		return deck_structs.Comment{}, err
+
+	}
+	decoder := json.NewDecoder(call.Body)
+	var ocs deck_structs.OcsResponseSingle
+	err = decoder.Decode(&ocs)
+	if err != nil {
+		panic(err)
+	}
+	return ocs.Ocs.Data, nil
+}
+
+func DeleteComment(cardId int, commentId int, configuration utils.Configuration) (int, error) {
+	call, err := httpCall(nil, http.MethodDelete,
+		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments/%d", configuration.Url, cardId, commentId),
+		configuration.User, configuration.Password, true)
+	if err != nil {
+		return call.StatusCode, err
+	}
+	return call.StatusCode, nil
+}
