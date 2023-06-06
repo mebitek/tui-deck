@@ -55,8 +55,7 @@ func BuildCardViewer() {
 
 		} else if event.Rune() == 99 {
 			// c -> comments
-			deck_comment.CommentsList.SetTitle(fmt.Sprintf(" %s- COMMENTS ", DetailText.GetTitle()))
-			deck_comment.CommentsList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			deck_comment.CommentTree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEscape {
 					// ESC -> back to main view
 					deck_ui.BuildFullFlex(DetailText)
@@ -75,15 +74,10 @@ func BuildCardViewer() {
 			})
 
 			cardId := utils.GetId(DetailText.GetTitle())
-			deck_comment.GetComments(cardId)
-			deck_ui.BuildFullFlex(deck_comment.CommentsList)
+			deck_comment.CreateCommentsTree(cardId)
 
-			deck_comment.DetailCommentView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-				if event.Key() == tcell.KeyEsc {
-					deck_ui.BuildFullFlex(deck_comment.CommentsList)
-				}
-				return event
-			})
+			deck_comment.CommentTree.SetTitle(fmt.Sprintf(" %s- COMMENTS ", DetailText.GetTitle()))
+			deck_ui.BuildFullFlex(deck_comment.CommentTree)
 
 		} else if event.Rune() == 116 {
 			// t -> tags

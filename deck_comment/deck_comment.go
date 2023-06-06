@@ -3,7 +3,7 @@ package deck_comment
 import (
 	"fmt"
 	"github.com/rivo/tview"
-	"time"
+	"sort"
 	"tui-deck/deck_http"
 	"tui-deck/deck_markdown"
 	"tui-deck/deck_structs"
@@ -13,32 +13,32 @@ import (
 
 var Comments []deck_structs.Comment
 
-var CurrentCard deck_structs.Card
-var CommentsList *tview.List
+var CommentTree *tview.TreeView
 var CommentMap = make(map[int]deck_structs.Comment)
-
-var DetailCommentView *tview.TextView
 
 var app *tview.Application
 var Modal *tview.Modal
 var configuration utils.Configuration
 
+var CommentTreeStructMap = make(map[int]CommentStruct)
+
+type CommentStruct struct {
+	Comment deck_structs.Comment
+	Replies []CommentStruct
+}
+
 func Init(application *tview.Application, conf utils.Configuration) {
 	app = application
 	configuration = conf
-	CommentsList = tview.NewList()
-	CommentsList.SetBorder(true)
-	CommentsList.SetBorderColor(utils.GetColor(configuration.Color))
 
-	DetailCommentView = tview.NewTextView()
-	DetailCommentView.SetDynamicColors(true)
-	DetailCommentView.SetBorder(true)
-	DetailCommentView.SetBorderColor(utils.GetColor(configuration.Color))
+	CommentTree = tview.NewTreeView()
+	CommentTree.SetBorder(true)
+	CommentTree.SetBorderColor(utils.GetColor(configuration.Color))
 
 	Modal = tview.NewModal()
 }
 
-func GetComments(cardId int) {
+func getComments(cardId int) {
 
 	var err error
 	Comments, err = deck_http.GetComments(cardId, configuration)
@@ -46,32 +46,80 @@ func GetComments(cardId int) {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting comments from card: %s", err.Error()))
 	}
 
-	CommentsList.Clear()
+	replies := make(map[int]deck_structs.Comment)
 	for _, c := range Comments {
-		secondaryMessage := ""
-		if c.ReplyTo != nil {
-			secondaryMessage = fmt.Sprintf("Reply to comment #%d", c.ReplyTo.Id)
-		}
-		parse, _ := time.Parse("2006-01-02T15:04:05+00:00", c.CreationDateTime)
-		creationDate := parse.Format("15:04:05 - 2006-01-02")
-		CommentsList.AddItem(fmt.Sprintf("#%d - %s", c.Id, creationDate), secondaryMessage, rune(0), nil)
 		CommentMap[c.Id] = c
+		cs := CommentStruct{
+			Comment: c,
+		}
+		if c.ReplyTo != nil {
+			replies[c.ReplyTo.Id] = c
+		} else {
+			CommentTreeStructMap[c.Id] = cs
+		}
 	}
 
-	CommentsList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
-		commentId := utils.GetId(name)
-		DetailCommentView.SetTitle(fmt.Sprintf(" #%d - %s ", commentId, "Comment"))
+	keySlice := make([]int, 0)
+	for key, _ := range replies {
+		keySlice = append(keySlice, key)
+	}
+	sort.Ints(keySlice)
 
-		text := deck_markdown.GetMarkDownDescription(utils.FormatDescription(Comments[index].Message), configuration)
-		comment := CommentMap[commentId]
-
-		if comment.ReplyTo != nil {
-			text = fmt.Sprintf("%s\n#%d -------------------------\n\n[%s:-:-]%s[-:-:-]", text, commentId, configuration.Color, deck_markdown.GetMarkDownDescription(comment.ReplyTo.Message, configuration))
+	for _, k := range keySlice {
+		r := replies[k]
+		cs, ok := CommentTreeStructMap[k]
+		if ok {
+			c := CommentStruct{Comment: r}
+			cs.Replies = append(cs.Replies, c)
+			CommentTreeStructMap[k] = cs
+		} else {
+			for k1, r1 := range CommentTreeStructMap {
+				searchReplies(r1.Replies, k, r)
+				CommentTreeStructMap[k1] = r1
+			}
 		}
+	}
+}
 
-		DetailCommentView.SetText(text)
-		deck_ui.BuildFullFlex(DetailCommentView)
+func searchReplies(replies []CommentStruct, k int, r deck_structs.Comment) {
+	for i, r2 := range replies {
+		if k == r2.Comment.Id {
+			c := CommentStruct{Comment: r}
+			r2.Replies = append(r2.Replies, c)
+			replies[i] = r2
+		} else {
+			searchReplies(r2.Replies, k, r)
+		}
+	}
+}
 
-	})
+func CreateCommentsTree(cardId int) {
 
+	getComments(cardId)
+	root := tview.NewTreeNode("COMMENTS").
+		SetColor(utils.GetColor(configuration.Color)).SetSelectable(false)
+	CommentTree.SetRoot(root).SetCurrentNode(root)
+
+	keySlice := make([]int, 0)
+	for key, _ := range CommentTreeStructMap {
+		keySlice = append(keySlice, key)
+	}
+	sort.Ints(keySlice)
+	for _, key := range keySlice {
+		l := CommentTreeStructMap[key]
+		comment := CommentMap[key]
+		node := tview.NewTreeNode(fmt.Sprintf("#%d - %s", comment.Id, deck_markdown.GetMarkDownDescription(comment.Message, configuration)))
+		buildTree(l.Replies, node)
+		root.AddChild(node)
+	}
+}
+
+func buildTree(replies []CommentStruct, node *tview.TreeNode) {
+	if len(replies) > 0 {
+		for _, r := range replies {
+			node1 := tview.NewTreeNode(fmt.Sprintf("#%d - %s", r.Comment.Id, deck_markdown.GetMarkDownDescription(r.Comment.Message, configuration)))
+			node.AddChild(node1)
+			buildTree(r.Replies, node1)
+		}
+	}
 }
