@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rivo/tview"
 	"sort"
+	"time"
 	"tui-deck/deck_http"
 	"tui-deck/deck_markdown"
 	"tui-deck/deck_structs"
@@ -60,7 +61,7 @@ func getComments(cardId int) {
 	}
 
 	keySlice := make([]int, 0)
-	for key, _ := range replies {
+	for key := range replies {
 		keySlice = append(keySlice, key)
 	}
 	sort.Ints(keySlice)
@@ -101,14 +102,16 @@ func CreateCommentsTree(cardId int) {
 	CommentTree.SetRoot(root).SetCurrentNode(root)
 
 	keySlice := make([]int, 0)
-	for key, _ := range CommentTreeStructMap {
+	for key := range CommentTreeStructMap {
 		keySlice = append(keySlice, key)
 	}
 	sort.Ints(keySlice)
 	for _, key := range keySlice {
 		l := CommentTreeStructMap[key]
 		comment := CommentMap[key]
-		node := tview.NewTreeNode(fmt.Sprintf("#%d - %s", comment.Id, deck_markdown.GetMarkDownDescription(comment.Message, configuration)))
+		node := tview.NewTreeNode(fmt.Sprintf("[%s:-:-]#%d[-:-:-] - [%s:-:i][%s][-:-:-] - %s", configuration.Color,
+			comment.Id, configuration.Color, getCreationDate(comment),
+			deck_markdown.GetMarkDownDescription(comment.Message, configuration)))
 		buildTree(l.Replies, node)
 		root.AddChild(node)
 	}
@@ -117,9 +120,15 @@ func CreateCommentsTree(cardId int) {
 func buildTree(replies []CommentStruct, node *tview.TreeNode) {
 	if len(replies) > 0 {
 		for _, r := range replies {
-			node1 := tview.NewTreeNode(fmt.Sprintf("#%d - %s", r.Comment.Id, deck_markdown.GetMarkDownDescription(r.Comment.Message, configuration)))
+			node1 := tview.NewTreeNode(fmt.Sprintf("#%d - [-:-:i][%s][-:-:-] - %s", r.Comment.Id,
+				getCreationDate(r.Comment), deck_markdown.GetMarkDownDescription(r.Comment.Message, configuration)))
 			node.AddChild(node1)
 			buildTree(r.Replies, node1)
 		}
 	}
+}
+
+func getCreationDate(comment deck_structs.Comment) string {
+	parse, _ := time.Parse("2006-01-02T15:04:05+00:00", comment.CreationDateTime)
+	return parse.Format("15:04:05 - 2006-01-02")
 }
