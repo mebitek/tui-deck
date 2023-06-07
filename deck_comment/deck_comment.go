@@ -200,23 +200,6 @@ func EditComment(cardId int, comment deck_structs.Comment) {
 	//}
 }
 
-func searchEditReplies(replies []CommentStruct, k int, parentId int, commentId int) {
-	for i, r := range replies {
-		if r.Comment.Id == parentId {
-			for i1, r1 := range r.Replies {
-				if r1.Comment.Id == commentId {
-					r.Replies[i1] = CommentStruct{Comment: r.Comment, Replies: r.Replies[i1].Replies}
-					CommentTreeStructMap[k] = CommentStruct{Comment: CommentTreeStructMap[k].Comment, Replies: r.Replies}
-					break
-				}
-			}
-		}
-		if i == len(replies)-1 {
-			searchEditReplies(r.Replies, k, parentId, commentId)
-		}
-	}
-}
-
 func ReplyComment(cardId int, parentId int, comment deck_structs.Comment) {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s", "parentId": %d }`, comment.Message, parentId), "\n", `\n`)
 	//var newComment deck_structs.Comment
@@ -279,55 +262,4 @@ func DeleteComment(cardId int, commentId int) {
 
 	deck_ui.FullFlex.AddItem(Modal, 0, 0, false)
 	app.SetFocus(Modal)
-}
-
-func findParent(replies []CommentStruct, commentId int) (int, error) {
-	var found = false
-	var parentId int
-	var listReplies = make([]CommentStruct, 0)
-	for _, r := range replies {
-		if r.Comment.Id == commentId {
-			parentId = r.Comment.ReplyTo.Id
-			found = true
-		}
-		for _, r1 := range r.Replies {
-			listReplies = append(listReplies, r1)
-		}
-
-	}
-	if !found {
-		return findParent(listReplies, commentId)
-	}
-	return parentId, nil
-}
-
-func deleteReplies(replies []CommentStruct, k int, parentId int, commentId int) {
-	var listReplies = make([]CommentStruct, 0)
-	var found = false
-	for i, r := range replies {
-		if r.Comment.Id == parentId {
-			for i1, r1 := range r.Replies {
-				if r1.Comment.Id == commentId {
-					r.Replies = append(r.Replies[:i1], r.Replies[i1+1:]...)
-					replies[i].Replies = r.Replies
-					found = true
-					break
-				}
-			}
-		} else {
-			if r.Comment.Id == commentId {
-				p := CommentTreeStructMap[parentId]
-				p.Replies = append(p.Replies[:i], p.Replies[i+1:]...)
-				CommentTreeStructMap[parentId] = CommentStruct{Comment: p.Comment, Replies: p.Replies}
-				found = true
-				break
-			}
-		}
-		for _, r1 := range r.Replies {
-			listReplies = append(listReplies, r1)
-		}
-	}
-	if !found {
-		deleteReplies(listReplies, k, parentId, commentId)
-	}
 }
