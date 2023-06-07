@@ -404,11 +404,11 @@ func AddComment(cardId int, jsonBody string, configuration utils.Configuration) 
 	return ocs.Ocs.Data, nil
 }
 
-func EditComment(cardId int, commentid int, jsonBody string, configuration utils.Configuration) (deck_structs.Comment, error) {
+func EditComment(cardId int, commentId int, jsonBody string, configuration utils.Configuration) (deck_structs.Comment, error) {
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPut,
-		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments/%d", configuration.Url, cardId, commentid),
+		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments/%d", configuration.Url, cardId, commentId),
 		configuration.User, configuration.Password, true)
 	if err != nil {
 		return deck_structs.Comment{}, err
