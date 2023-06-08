@@ -22,11 +22,12 @@ var app *tview.Application
 var Modal *tview.Modal
 var configuration utils.Configuration
 
-var CommentTreeStructMap = make(map[int]CommentStruct)
+var CommentTreeStructMap = make(map[int]*CommentStruct)
 
 type CommentStruct struct {
 	Comment deck_structs.Comment
-	Replies []CommentStruct
+	Parent  *CommentStruct
+	Replies []*CommentStruct
 }
 
 func Init(application *tview.Application, conf utils.Configuration) {
@@ -42,7 +43,7 @@ func Init(application *tview.Application, conf utils.Configuration) {
 
 func GetComments(cardId int) {
 
-	CommentTreeStructMap = make(map[int]CommentStruct)
+	CommentTreeStructMap = make(map[int]*CommentStruct)
 
 	var err error
 	Comments, err = deck_http.GetComments(cardId, configuration)
@@ -59,7 +60,7 @@ func GetComments(cardId int) {
 		if c.ReplyTo != nil {
 			replies[c.ReplyTo.Id] = append(replies[c.ReplyTo.Id], c)
 		} else {
-			CommentTreeStructMap[c.Id] = cs
+			CommentTreeStructMap[c.Id] = &cs
 		}
 	}
 
@@ -74,8 +75,8 @@ func GetComments(cardId int) {
 		cs, ok := CommentTreeStructMap[k]
 		if ok {
 			for _, r1 := range r {
-				c := CommentStruct{Comment: r1}
-				cs.Replies = append(cs.Replies, c)
+				c := CommentStruct{Comment: r1, Parent: cs}
+				cs.Replies = append(cs.Replies, &c)
 			}
 			CommentTreeStructMap[k] = cs
 		} else {
@@ -89,11 +90,11 @@ func GetComments(cardId int) {
 	}
 }
 
-func searchReplies(replies []CommentStruct, k int, r deck_structs.Comment) {
+func searchReplies(replies []*CommentStruct, k int, r deck_structs.Comment) {
 	for i, r2 := range replies {
 		if k == r2.Comment.Id {
-			c := CommentStruct{Comment: r}
-			r2.Replies = append(r2.Replies, c)
+			c := CommentStruct{Comment: r, Parent: r2}
+			r2.Replies = append(r2.Replies, &c)
 			replies[i] = r2
 		} else {
 			searchReplies(r2.Replies, k, r)
@@ -101,9 +102,7 @@ func searchReplies(replies []CommentStruct, k int, r deck_structs.Comment) {
 	}
 }
 
-func CreateCommentsTree(cardId int) {
-	GetComments(cardId)
-
+func CreateCommentsTree() {
 	root := tview.NewTreeNode("COMMENTS").
 		SetColor(utils.GetColor(configuration.Color)).SetSelectable(false)
 	CommentTree.SetRoot(root).SetCurrentNode(root)
@@ -116,8 +115,8 @@ func CreateCommentsTree(cardId int) {
 	for _, key := range keySlice {
 		l := CommentTreeStructMap[key]
 		comment := l.Comment
-		node := tview.NewTreeNode(fmt.Sprintf("[%s:-:-]#%d[-:-:-] - [%s:-:i][%s][-:-:-] - %s", configuration.Color,
-			comment.Id, configuration.Color, getCreationDate(comment),
+		node := tview.NewTreeNode(fmt.Sprintf("[%s:-:-]#%d[-:-:-] - [%s:-:i]%s - [%s][-:-:-] - %s", configuration.Color,
+			comment.Id, configuration.Color, comment.ActorDisplayName, getCreationDate(comment),
 			deck_markdown.GetMarkDownDescription(comment.Message, configuration)))
 		node.SetReference(l.Comment.Id)
 		buildTree(l.Replies, node)
@@ -125,10 +124,10 @@ func CreateCommentsTree(cardId int) {
 	}
 }
 
-func buildTree(replies []CommentStruct, node *tview.TreeNode) {
+func buildTree(replies []*CommentStruct, node *tview.TreeNode) {
 	if len(replies) > 0 {
 		for _, r := range replies {
-			node1 := tview.NewTreeNode(fmt.Sprintf("#%d - [-:-:i][%s][-:-:-] - %s", r.Comment.Id,
+			node1 := tview.NewTreeNode(fmt.Sprintf("#%d - [-:-:i]%s - [%s][-:-:-] - %s", r.Comment.Id, r.Comment.ActorDisplayName,
 				getCreationDate(r.Comment), deck_markdown.GetMarkDownDescription(r.Comment.Message, configuration)))
 			node1.SetReference(r.Comment.Id)
 			node.AddChild(node1)
@@ -167,7 +166,6 @@ func BuildAddForm(c deck_structs.Comment) (*tview.Form, *deck_structs.Comment) {
 	addForm.AddTextArea("Message", c.Message, 60, 10, 300, func(message string) {
 		comment.Message = message
 	})
-
 	return addForm, &comment
 }
 
@@ -179,48 +177,40 @@ func AddComment(cardId int, comment deck_structs.Comment) {
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error creating new comment: %s", err.Error()))
 	}
-
-	CommentTreeStructMap[newComment.Id] = CommentStruct{Comment: newComment}
+	CommentTreeStructMap[newComment.Id] = &CommentStruct{Comment: newComment}
 }
 
 func EditComment(cardId int, comment deck_structs.Comment) {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s" }`, comment.Message), "\n", `\n`)
-	_, err := deck_http.EditComment(cardId, comment.Id, jsonBody, configuration)
+	editComment, err := deck_http.EditComment(cardId, comment.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error editing new comment: %s", err.Error()))
+	} else {
+		for _, k := range CommentTreeStructMap {
+			node := findById(k, comment.Id)
+			if node != nil {
+				node.Comment = editComment
+				break
+			}
+		}
 	}
-	//_, ok := CommentTreeStructMap[comment.Id]
-	//if ok {
-	//	CommentTreeStructMap[comment.Id] = CommentStruct{Comment: comment, Replies: CommentTreeStructMap[comment.Id].Replies}
-	//} else {
-	//	for k, c := range CommentTreeStructMap {
-	//		parentId, _ := findParent(c.Replies, editComment.Id)
-	//		searchEditReplies(c.Replies, k, parentId, editComment.Id)
-	//	}
-	//}
 }
 
 func ReplyComment(cardId int, parentId int, comment deck_structs.Comment) {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s", "parentId": %d }`, comment.Message, parentId), "\n", `\n`)
 	//var newComment deck_structs.Comment
-	var err error
-	_, err = deck_http.AddComment(cardId, jsonBody, configuration)
+	newComment, err := deck_http.AddComment(cardId, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error replying comment: %s", err.Error()))
-	}
-
-	/*	parentComment, ok := CommentTreeStructMap[parentId]
-		if ok {
-			rep := append(parentComment.Replies, CommentStruct{Comment: newComment})
-			parentComment = CommentStruct{Comment: parentComment.Comment, Replies: rep}
-			CommentTreeStructMap[parentId] = parentComment
-		} else {
-			for k1, r1 := range CommentTreeStructMap {
-				searchReplies(r1.Replies, parentId, newComment)
-				CommentTreeStructMap[k1] = r1
+	} else {
+		for _, k := range CommentTreeStructMap {
+			node := findById(k, parentId)
+			if node != nil {
+				node.addReply(newComment)
+				break
 			}
-		}*/
-
+		}
+	}
 }
 
 func DeleteComment(cardId int, commentId int) {
@@ -251,7 +241,14 @@ func DeleteComment(cardId int, commentId int) {
 				}
 			}()
 
-			CreateCommentsTree(cardId)
+			for _, k := range CommentTreeStructMap {
+				node := findById(k, commentId)
+				if node != nil {
+					node.remove()
+					break
+				}
+			}
+			CreateCommentsTree()
 			deck_ui.FullFlex.RemoveItem(Modal)
 			app.SetFocus(CommentTree)
 		} else if buttonLabel == "No" {
@@ -259,7 +256,50 @@ func DeleteComment(cardId int, commentId int) {
 			app.SetFocus(CommentTree)
 		}
 	})
-
 	deck_ui.FullFlex.AddItem(Modal, 0, 0, false)
 	app.SetFocus(Modal)
+}
+
+func findById(root *CommentStruct, id int) *CommentStruct {
+	queue := make([]*CommentStruct, 0)
+	queue = append(queue, root)
+	for len(queue) > 0 {
+		nextUp := queue[0]
+		queue = queue[1:]
+		if nextUp.Comment.Id == id {
+			return nextUp
+		}
+		if len(nextUp.Replies) > 0 {
+			for _, child := range nextUp.Replies {
+				queue = append(queue, child)
+			}
+		}
+	}
+	return nil
+}
+
+func (node *CommentStruct) remove() {
+	if node.Parent != nil {
+		for idx, sibling := range node.Parent.Replies {
+			if sibling == node {
+				node.Parent.Replies = append(
+					node.Parent.Replies[:idx],
+					node.Parent.Replies[idx+1:]...,
+				)
+			}
+		}
+	} else {
+		delete(CommentTreeStructMap, node.Comment.Id)
+	}
+
+	if len(node.Replies) != 0 {
+		for _, child := range node.Replies {
+			child.Parent = nil
+		}
+		node.Replies = nil
+	}
+}
+
+func (node *CommentStruct) addReply(newComment deck_structs.Comment) {
+	node.Replies = append(node.Replies, &CommentStruct{Comment: newComment, Parent: node})
 }

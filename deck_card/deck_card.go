@@ -56,7 +56,7 @@ func BuildCardViewer() {
 		} else if event.Rune() == 99 {
 			// c -> comments
 			cardId := utils.GetId(DetailText.GetTitle())
-			//deck_comment.GetComments(cardId)
+			deck_comment.GetComments(cardId)
 			deck_comment.CommentTree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEscape {
 					// ESC -> back to main view
@@ -77,7 +77,7 @@ func BuildCardViewer() {
 					addForm, comment := deck_comment.BuildAddForm(deck_structs.Comment{})
 					addForm.AddButton("Save", func() {
 						deck_comment.AddComment(cardId, *comment)
-						deck_comment.CreateCommentsTree(cardId)
+						deck_comment.CreateCommentsTree()
 						deck_ui.BuildFullFlex(deck_comment.CommentTree)
 					})
 					deck_ui.BuildFullFlex(addForm)
@@ -93,7 +93,7 @@ func BuildCardViewer() {
 					addForm, comment := deck_comment.BuildAddForm(deck_structs.Comment{})
 					addForm.AddButton("Save", func() {
 						deck_comment.ReplyComment(cardId, parentId, *comment)
-						deck_comment.CreateCommentsTree(cardId)
+						deck_comment.CreateCommentsTree()
 						deck_ui.BuildFullFlex(deck_comment.CommentTree)
 					})
 					deck_ui.BuildFullFlex(addForm)
@@ -105,7 +105,7 @@ func BuildCardViewer() {
 					editForm, editComment := deck_comment.BuildAddForm(comment)
 					editForm.AddButton("Save", func() {
 						deck_comment.EditComment(cardId, *editComment)
-						deck_comment.CreateCommentsTree(cardId)
+						deck_comment.CreateCommentsTree()
 						deck_ui.BuildFullFlex(deck_comment.CommentTree)
 					})
 					deck_ui.BuildFullFlex(editForm)
@@ -118,7 +118,7 @@ func BuildCardViewer() {
 				return event
 			})
 
-			deck_comment.CreateCommentsTree(cardId)
+			deck_comment.CreateCommentsTree()
 
 			deck_comment.CommentTree.SetTitle(fmt.Sprintf(" %s- COMMENTS ", DetailText.GetTitle()))
 			deck_ui.BuildFullFlex(deck_comment.CommentTree)

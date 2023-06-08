@@ -7,11 +7,11 @@ import (
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.5.4"
+const VERSION = "v0.5.5"
 
 var FullFlex = tview.NewFlex()
 var MainFlex = tview.NewFlex()
-var FooterBar = tview.NewTextView()
+var FooterBar = *tview.NewTextView()
 
 var Primitives = make(map[tview.Primitive]int)
 var PrimitivesIndexMap = make(map[int]tview.Primitive)
@@ -34,13 +34,13 @@ func Init(application *tview.Application, conf utils.Configuration) {
 
 	FullFlex.SetDirection(tview.FlexRow)
 	FullFlex.AddItem(MainFlex, 0, 10, true)
-	FullFlex.AddItem(FooterBar, 0, 1, false)
+	FullFlex.AddItem(&FooterBar, 0, 1, false)
 }
 
 func BuildFullFlex(primitive tview.Primitive) {
 	FullFlex.Clear()
 	FullFlex.AddItem(primitive, 0, 10, true)
-	FullFlex.AddItem(FooterBar, 0, 1, false)
+	FullFlex.AddItem(&FooterBar, 0, 1, false)
 	if primitive != MainFlex {
 		FooterBar.SetText("Press [yellow]?[white] for help, [yellow]ESC[white] to go back")
 

@@ -408,7 +408,7 @@ func EditComment(cardId int, commentId int, jsonBody string, configuration utils
 	body := []byte(jsonBody)
 
 	call, err := httpCall(body, http.MethodPut,
-		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.0/cards/%d/comments/%d", configuration.Url, cardId, commentId),
+		fmt.Sprintf("%s/ocs/v2.php/apps/deck/api/v1.1/cards/%d/comments/%d", configuration.Url, cardId, commentId),
 		configuration.User, configuration.Password, true)
 	if err != nil {
 		return deck_structs.Comment{}, err
