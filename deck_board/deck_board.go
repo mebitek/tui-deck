@@ -245,7 +245,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
 
 		}
-		deck_ui.MainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s", CurrentBoard.Color, CurrentBoard.Title))
+		deck_ui.MainFlex.SetTitle(fmt.Sprintf(" TUI DECK: [#%s]%s ", CurrentBoard.Color, CurrentBoard.Title))
 
 		deck_stack.Stacks, err = deck_db.GetStacks(CurrentBoard.Id, Boards[index].Updated, configuration)
 		if err != nil {
