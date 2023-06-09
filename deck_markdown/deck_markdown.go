@@ -97,7 +97,7 @@ func getStringInBetween(str string, start string, end string) (result [][]string
 }
 
 func checkLink(str string) (result [][]string) {
-	re := regexp.MustCompile(`(\[[^][]+])\((https?:\/\/[^()]+)\)`)
+	re := regexp.MustCompile(`(\[[^][]+])\((https?://[^()]+)\)`)
 	match := re.FindAllStringSubmatch(str, -1)
 	if len(match) > 0 {
 		return match
