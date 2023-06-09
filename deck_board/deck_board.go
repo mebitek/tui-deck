@@ -241,6 +241,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 		var err error
 		CurrentBoard, err = deck_db.GetBoardDetails(Boards[index].Id, Boards[index].Updated, configuration)
 		Boards[index] = CurrentBoard
+		deck_card.SetCurrentBoard(CurrentBoard)
 		if err != nil {
 			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting board detail: %s", err.Error()))
 

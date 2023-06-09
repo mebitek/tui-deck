@@ -5,7 +5,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sort"
-	"strings"
 	"tui-deck/deck_comment"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
@@ -39,6 +38,10 @@ func Init(application *tview.Application, conf utils.Configuration, board deck_s
 	EditTagsFlex = tview.NewFlex()
 
 	Modal = tview.NewModal()
+	currentBoard = board
+}
+
+func SetCurrentBoard(board deck_structs.Board) {
 	currentBoard = board
 }
 
@@ -282,8 +285,8 @@ func moveCardToStack(todoList *tview.List, primitive *tview.Primitive, key tcell
 
 	nextStack := deck_stack.Stacks[actualPrimitiveIndex+operator]
 
-	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"stackId": "%d", "title": "%s", "type": "plain", "owner":"%s"}`,
-		nextStack.Id, card.Title, configuration.User), "\n", `\n`)
+	jsonBody := fmt.Sprintf(`{"stackId": "%d", "title": "%s", "type": "plain", "owner":"%s"}`,
+		nextStack.Id, utils.CleanText(card.Title), configuration.User)
 
 	go updateCard(currentBoard.Id, card.StackId, card.Id, jsonBody)
 
@@ -328,7 +331,7 @@ func BuildAddForm() (*tview.Form, *deck_structs.Card) {
 func AddCard(actualList *tview.List, card deck_structs.Card) {
 	var stackIndex, stack, _ = deck_stack.GetActualStack(actualList)
 
-	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "type": "plain", "order": 0}`, card.Title, card.Description)
+	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "type": "plain", "order": 0}`, utils.CleanText(card.Title), utils.CleanText(card.Description))
 	var newCard deck_structs.Card
 	var err error
 	newCard, err = deck_http.AddCard(currentBoard.Id, stack.Id, jsonBody, configuration)
@@ -352,12 +355,10 @@ func AddCard(actualList *tview.List, card deck_structs.Card) {
 }
 
 func editCard() {
-	description := strings.ReplaceAll(EditableCard.Description, "\"", "\\\"")
-	title := strings.ReplaceAll(EditableCard.Title, "\"", "\\\"")
+	description := utils.CleanText(EditableCard.Description)
+	title := utils.CleanText(EditableCard.Title)
 
-	jsonBody := strings.ReplaceAll(
-		fmt.Sprintf(`{"description": "%s", "title": "%s", "type": "plain", "owner":"%s"}`,
-			description, title, configuration.User), "\n", `\n`)
+	jsonBody := fmt.Sprintf(`{"description": "%s", "title": "%s", "type": "plain", "owner":"%s"}`, utils.CleanText(description), utils.CleanText(title), configuration.User)
 	var err error
 	_, err = deck_http.UpdateCard(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
 	if err != nil {
@@ -437,7 +438,7 @@ func BuildStacks() {
 
 	for index, s := range deck_stack.Stacks {
 		todoList := tview.NewList()
-		todoList.SetTitle(fmt.Sprintf("# %s ", s.Title))
+		todoList.SetTitle(fmt.Sprintf("%s ", s.Title))
 		todoList.SetBorder(true)
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {

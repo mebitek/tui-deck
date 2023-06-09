@@ -129,3 +129,8 @@ func BuildLabels(card deck_structs.Card) string {
 	}
 	return labels
 }
+
+func CleanText(text string) string {
+	t1 := strings.ReplaceAll(text, "\"", "\\\"")
+	return strings.ReplaceAll(t1, "\n", `\n`)
+}
