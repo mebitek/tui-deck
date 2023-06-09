@@ -267,6 +267,16 @@ func addBoard(board deck_structs.Board) {
 	}
 	Boards = append(Boards, newBoard)
 	BoardList.AddItem(fmt.Sprintf("[#%s]#%d - %s", newBoard.Color, newBoard.Id, newBoard.Title), "", rune(0), nil)
+	if board.CreateDefaults {
+		var items []string = []string{"Todo", "Running", "Complete"}
+		for i, s := range items {
+			stack := deck_structs.Stack{
+				Title: s,
+				Order: i,
+			}
+			_ = deck_stack.AddStack(newBoard.Id, stack)
+		}
+	}
 
 	deck_ui.BuildFullFlex(BoardFlex, err)
 }
@@ -357,11 +367,11 @@ func buildAddLabelForm(l deck_structs.Label) (*tview.Form, *deck_structs.Label) 
 
 func buildAddBoardForm(b deck_structs.Board) (*tview.Form, *deck_structs.Board) {
 	addForm := tview.NewForm()
-	var board deck_structs.Board = deck_structs.Board{}
+	var board = deck_structs.Board{}
 	var title = " Add Board "
 	if b.Id != 0 {
 		board = b
-		title = " Edit Boasrd "
+		title = " Edit Boaard "
 	}
 	addForm.SetTitle(title)
 	addForm.SetBorder(true)
@@ -382,6 +392,10 @@ func buildAddBoardForm(b deck_structs.Board) (*tview.Form, *deck_structs.Board) 
 	})
 	addForm.AddInputField("Color", b.Color, 20, nil, func(color string) {
 		board.Color = color
+	})
+
+	addForm.AddCheckbox("Create default stacks", false, func(checked bool) {
+		board.CreateDefaults = checked
 	})
 
 	return addForm, &board

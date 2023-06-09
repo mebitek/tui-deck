@@ -438,7 +438,7 @@ func BuildStacks() {
 
 	for index, s := range deck_stack.Stacks {
 		todoList := tview.NewList()
-		todoList.SetTitle(fmt.Sprintf("%s ", s.Title))
+		todoList.SetTitle(fmt.Sprintf(" %s ", s.Title))
 		todoList.SetBorder(true)
 
 		todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {

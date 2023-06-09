@@ -7,14 +7,15 @@ type Owner struct {
 }
 
 type Board struct {
-	Id        int     `json:"id"`
-	Title     string  `json:"title"`
-	Owner     Owner   `json:"owner"`
-	Color     string  `json:"color"`
-	Labels    []Label `json:"labels"`
-	Etag      string  `json:"etag"`
-	Updated   bool    `json:"-"`
-	DeletedAt int     `json:"deletedAt"`
+	Id             int     `json:"id"`
+	Title          string  `json:"title"`
+	Owner          Owner   `json:"owner"`
+	Color          string  `json:"color"`
+	Labels         []Label `json:"labels"`
+	Etag           string  `json:"etag"`
+	Updated        bool    `json:"-"`
+	CreateDefaults bool    `json:"-"`
+	DeletedAt      int     `json:"deletedAt"`
 }
 
 type Stack struct {
