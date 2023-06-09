@@ -1,5 +1,5 @@
 # tui-deck
-A TUI frontend for Nextcloud Deck app written in GO using the [Rich Interactive Widgets for Terminal UIs
+A TUI frontend for Nextcloud [Deck](https://github.com/nextcloud/deck) app written in GO using the [Rich Interactive Widgets for Terminal UIs
 ](https://github.com/rivo/tview)
 
 ![image](https://github.com/mebitek/tui-deck/assets/1067967/4c1913be-09d0-4fea-bc67-19da89e2e9aa)
