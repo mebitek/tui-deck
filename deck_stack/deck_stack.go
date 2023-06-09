@@ -33,16 +33,18 @@ func GetActualStack(actualList *tview.List) (int, deck_structs.Stack, error) {
 	return 0, deck_structs.Stack{}, errors.New("not found")
 }
 
-func AddStack(boardId int, stack deck_structs.Stack) {
+func AddStack(boardId int, stack deck_structs.Stack) error {
 	jsonBody := fmt.Sprintf(`{"title":"%s", "order": %d}`, stack.Title, stack.Order)
 	var newStack deck_structs.Stack
 	var err error
 	newStack, err = deck_http.AddStack(boardId, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new stack: %s", err.Error()))
+		return err
 	}
 
 	Stacks = append(Stacks, newStack)
+	return nil
 
 }
 
@@ -68,7 +70,7 @@ func DeleteStack(stackId int, actualList *tview.List) {
 	app.SetFocus(Modal)
 }
 
-func EditStack(boardId int, stack deck_structs.Stack) {
+func EditStack(boardId int, stack deck_structs.Stack) error {
 	description := strings.ReplaceAll(stack.Title, "\"", "\\\"")
 
 	jsonBody := strings.ReplaceAll(
@@ -78,7 +80,9 @@ func EditStack(boardId int, stack deck_structs.Stack) {
 	_, err = deck_http.EditStack(boardId, stack.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error updating stack: %s", err.Error()))
+		return err
 	}
+	return nil
 }
 
 func BuildAddForm(s deck_structs.Stack) (*tview.Form, *deck_structs.Stack) {
@@ -98,7 +102,7 @@ func BuildAddForm(s deck_structs.Stack) (*tview.Form, *deck_structs.Stack) {
 	addForm.SetLabelColor(utils.GetColor(configuration.Color))
 	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
 			return nil
 		}
 		return event

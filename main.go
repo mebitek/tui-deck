@@ -108,7 +108,7 @@ func main() {
 			deck_card.BuildStacks()
 		} else if event.Rune() == 115 {
 			// s -> switch board
-			deck_ui.BuildFullFlex(deck_board.BoardFlex)
+			deck_ui.BuildFullFlex(deck_board.BoardFlex, nil)
 		} else if event.Rune() == 97 {
 			// a -> add card
 			if len(deck_stack.Stacks) == 0 {
@@ -120,7 +120,7 @@ func main() {
 			addForm.AddButton("Save", func() {
 				deck_card.AddCard(actualList, *card)
 			})
-			deck_ui.BuildFullFlex(addForm)
+			deck_ui.BuildFullFlex(addForm, nil)
 		} else if event.Rune() == 100 {
 			if len(deck_stack.Stacks) == 0 {
 				return nil
@@ -137,11 +137,11 @@ func main() {
 			// ctrl + a -> add stack
 			addForm, stack := deck_stack.BuildAddForm(deck_structs.Stack{})
 			addForm.AddButton("Save", func() {
-				deck_stack.AddStack(deck_board.CurrentBoard.Id, *stack)
+				err := deck_stack.AddStack(deck_board.CurrentBoard.Id, *stack)
 				deck_card.BuildStacks()
-				deck_ui.BuildFullFlex(deck_ui.MainFlex)
+				deck_ui.BuildFullFlex(deck_ui.MainFlex, err)
 			})
-			deck_ui.BuildFullFlex(addForm)
+			deck_ui.BuildFullFlex(addForm, nil)
 
 		} else if event.Key() == tcell.KeyCtrlD {
 			// ctrl + d -> delete stack
@@ -166,7 +166,7 @@ func main() {
 					deck_ui.MainFlex.RemoveItem(actualList)
 					deck_stack.Stacks = append(deck_stack.Stacks[:index], deck_stack.Stacks[index+1:]...)
 					deck_card.BuildStacks()
-					deck_ui.BuildFullFlex(deck_ui.MainFlex)
+					deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
 				} else if buttonLabel == "No" {
 					deck_ui.MainFlex.RemoveItem(deck_stack.Modal)
 					app.SetFocus(actualList)
@@ -182,15 +182,16 @@ func main() {
 			editForm, editedStack := deck_stack.BuildAddForm(currentStack)
 			editForm.AddButton("Save", func() {
 				actualList.SetTitle(fmt.Sprintf("# %s ", editedStack.Title))
-
-				go deck_stack.EditStack(deck_board.CurrentBoard.Id, *editedStack)
+				var err error
+				go func() {
+					err = deck_stack.EditStack(deck_board.CurrentBoard.Id, *editedStack)
+				}()
 
 				deck_stack.Stacks[index] = *editedStack
-
 				deck_card.BuildStacks()
-				deck_ui.BuildFullFlex(deck_ui.MainFlex)
+				deck_ui.BuildFullFlex(deck_ui.MainFlex, err)
 			})
-			deck_ui.BuildFullFlex(editForm)
+			deck_ui.BuildFullFlex(editForm, nil)
 
 		} else if event.Rune() == 63 {
 			// ? deck_help menu

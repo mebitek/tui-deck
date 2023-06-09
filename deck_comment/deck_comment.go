@@ -158,7 +158,7 @@ func BuildAddForm(c deck_structs.Comment) (*tview.Form, *deck_structs.Comment) {
 	addForm.SetLabelColor(utils.GetColor(configuration.Color))
 	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(CommentTree)
+			deck_ui.BuildFullFlex(CommentTree, nil)
 			return nil
 		}
 		return event
@@ -169,22 +169,25 @@ func BuildAddForm(c deck_structs.Comment) (*tview.Form, *deck_structs.Comment) {
 	return addForm, &comment
 }
 
-func AddComment(cardId int, comment deck_structs.Comment) {
+func AddComment(cardId int, comment deck_structs.Comment) error {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s" }`, comment.Message), "\n", `\n`)
 	var newComment deck_structs.Comment
 	var err error
 	newComment, err = deck_http.AddComment(cardId, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error creating new comment: %s", err.Error()))
+		return err
 	}
 	CommentTreeStructMap[newComment.Id] = &CommentStruct{Comment: newComment}
+	CommentsMap[newComment.Id] = newComment
+	return nil
 }
 
-func EditComment(cardId int, comment deck_structs.Comment) {
+func EditComment(cardId int, comment deck_structs.Comment) error {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s" }`, comment.Message), "\n", `\n`)
 	editComment, err := deck_http.EditComment(cardId, comment.Id, jsonBody, configuration)
 	if err != nil {
-		deck_ui.FooterBar.SetText(fmt.Sprintf("Error editing new comment: %s", err.Error()))
+		return err
 	} else {
 		for _, k := range CommentTreeStructMap {
 			node := findById(k, comment.Id)
@@ -194,23 +197,27 @@ func EditComment(cardId int, comment deck_structs.Comment) {
 			}
 		}
 	}
+	return nil
 }
 
-func ReplyComment(cardId int, parentId int, comment deck_structs.Comment) {
+func ReplyComment(cardId int, parentId int, comment deck_structs.Comment) error {
 	jsonBody := strings.ReplaceAll(fmt.Sprintf(`{"message":"%s", "parentId": %d }`, comment.Message, parentId), "\n", `\n`)
 	//var newComment deck_structs.Comment
 	newComment, err := deck_http.AddComment(cardId, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error replying comment: %s", err.Error()))
+		return err
 	} else {
 		for _, k := range CommentTreeStructMap {
 			node := findById(k, parentId)
 			if node != nil {
 				node.addReply(newComment)
+				CommentsMap[newComment.Id] = newComment
 				break
 			}
 		}
 	}
+	return nil
 }
 
 func DeleteComment(cardId int, commentId int) {

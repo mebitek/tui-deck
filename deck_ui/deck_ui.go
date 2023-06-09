@@ -7,7 +7,7 @@ import (
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.5.5"
+const VERSION = "v0.5.6"
 
 var FullFlex = tview.NewFlex()
 var MainFlex = tview.NewFlex()
@@ -37,15 +37,17 @@ func Init(application *tview.Application, conf utils.Configuration) {
 	FullFlex.AddItem(&FooterBar, 0, 1, false)
 }
 
-func BuildFullFlex(primitive tview.Primitive) {
+func BuildFullFlex(primitive tview.Primitive, err error) {
 	FullFlex.Clear()
 	FullFlex.AddItem(primitive, 0, 10, true)
 	FullFlex.AddItem(&FooterBar, 0, 1, false)
-	if primitive != MainFlex {
-		FooterBar.SetText("Press [yellow]?[white] for help, [yellow]ESC[white] to go back")
+	if err == nil {
+		if primitive != MainFlex {
+			FooterBar.SetText("Press [yellow]?[white] for help, [yellow]ESC[white] to go back")
 
-	} else {
-		FooterBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
+		} else {
+			FooterBar.SetText("Press [yellow]?[white] for help, [yellow]q[white] to exit")
+		}
 	}
 	app.SetFocus(primitive)
 }
@@ -56,11 +58,11 @@ func BuildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 	help.SetBorderColor(utils.GetColor(configuration.Color))
 	help.SetTitle(helpView.GetTitle())
 	FooterBar.SetTitle(VERSION)
-	BuildFullFlex(help)
+	BuildFullFlex(help, nil)
 
 	help.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
-			BuildFullFlex(primitive)
+			BuildFullFlex(primitive, nil)
 			FooterBar.SetTitle(" Info ")
 			return nil
 		} else if event.Key() == tcell.KeyEnter {

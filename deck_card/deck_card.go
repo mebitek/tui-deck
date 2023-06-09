@@ -46,12 +46,12 @@ func BuildCardViewer() {
 	DetailText.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
 			// ESC -> back to main view
-			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
 		} else if event.Rune() == 101 {
 			// e -> edit description
 			DetailEditText.SetTitle(fmt.Sprintf(" %s- EDIT", DetailText.GetTitle()))
 			DetailEditText.SetText(utils.FormatDescription(EditableCard.Description), true)
-			deck_ui.BuildFullFlex(DetailEditText)
+			deck_ui.BuildFullFlex(DetailEditText, nil)
 
 		} else if event.Rune() == 99 {
 			// c -> comments
@@ -60,7 +60,7 @@ func BuildCardViewer() {
 			deck_comment.CommentTree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEscape {
 					// ESC -> back to main view
-					deck_ui.BuildFullFlex(DetailText)
+					deck_ui.BuildFullFlex(DetailText, nil)
 					return nil
 				}
 				if event.Key() == tcell.KeyTAB {
@@ -76,11 +76,11 @@ func BuildCardViewer() {
 					// a -> add comment
 					addForm, comment := deck_comment.BuildAddForm(deck_structs.Comment{})
 					addForm.AddButton("Save", func() {
-						deck_comment.AddComment(cardId, *comment)
+						err := deck_comment.AddComment(cardId, *comment)
 						deck_comment.CreateCommentsTree()
-						deck_ui.BuildFullFlex(deck_comment.CommentTree)
+						deck_ui.BuildFullFlex(deck_comment.CommentTree, err)
 					})
-					deck_ui.BuildFullFlex(addForm)
+					deck_ui.BuildFullFlex(addForm, nil)
 					return nil
 				} else if event.Rune() == 100 {
 					// d -> delete comment
@@ -92,11 +92,11 @@ func BuildCardViewer() {
 					parentId := deck_comment.CommentTree.GetCurrentNode().GetReference().(int)
 					addForm, comment := deck_comment.BuildAddForm(deck_structs.Comment{})
 					addForm.AddButton("Save", func() {
-						deck_comment.ReplyComment(cardId, parentId, *comment)
+						err := deck_comment.ReplyComment(cardId, parentId, *comment)
 						deck_comment.CreateCommentsTree()
-						deck_ui.BuildFullFlex(deck_comment.CommentTree)
+						deck_ui.BuildFullFlex(deck_comment.CommentTree, err)
 					})
-					deck_ui.BuildFullFlex(addForm)
+					deck_ui.BuildFullFlex(addForm, nil)
 					return nil
 				} else if event.Rune() == 101 {
 					// e -> edit comment
@@ -104,11 +104,16 @@ func BuildCardViewer() {
 					comment := deck_comment.CommentsMap[commentId]
 					editForm, editComment := deck_comment.BuildAddForm(comment)
 					editForm.AddButton("Save", func() {
-						deck_comment.EditComment(cardId, *editComment)
+						go func() {
+							err := deck_comment.EditComment(cardId, *editComment)
+							if err != nil {
+								deck_ui.FooterBar.SetText(fmt.Sprintf("Error editing new comment: %s", err.Error()))
+							}
+						}()
 						deck_comment.CreateCommentsTree()
-						deck_ui.BuildFullFlex(deck_comment.CommentTree)
+						deck_ui.BuildFullFlex(deck_comment.CommentTree, nil)
 					})
-					deck_ui.BuildFullFlex(editForm)
+					deck_ui.BuildFullFlex(editForm, nil)
 					return nil
 				} else if event.Rune() == 63 {
 					// ? -> help
@@ -121,7 +126,7 @@ func BuildCardViewer() {
 			deck_comment.CreateCommentsTree()
 
 			deck_comment.CommentTree.SetTitle(fmt.Sprintf(" %s- COMMENTS ", DetailText.GetTitle()))
-			deck_ui.BuildFullFlex(deck_comment.CommentTree)
+			deck_ui.BuildFullFlex(deck_comment.CommentTree, nil)
 
 		} else if event.Rune() == 116 {
 			// t -> tags
@@ -188,7 +193,7 @@ func BuildCardViewer() {
 			EditTagsFlex.AddItem(labelList, 0, 1, true)
 			EditTagsFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEsc {
-					deck_ui.BuildFullFlex(DetailText)
+					deck_ui.BuildFullFlex(DetailText, nil)
 					return nil
 				}
 				if event.Key() == tcell.KeyTab {
@@ -205,7 +210,7 @@ func BuildCardViewer() {
 				return event
 			})
 
-			deck_ui.BuildFullFlex(EditTagsFlex)
+			deck_ui.BuildFullFlex(EditTagsFlex, nil)
 		} else if event.Rune() == 63 {
 			// ? -> deck_help menu
 			deck_ui.BuildHelp(DetailText, deck_help.HelpView)
@@ -218,13 +223,13 @@ func BuildCardViewer() {
 			DetailText.Clear()
 			DetailText.SetTitle(fmt.Sprintf(" %s ", EditableCard.Title))
 			DetailText.SetText(deck_markdown.GetMarkDownDescription(utils.FormatDescription(EditableCard.Description), configuration))
-			deck_ui.BuildFullFlex(DetailText)
+			deck_ui.BuildFullFlex(DetailText, nil)
 		} else if event.Key() == tcell.KeyF2 {
 			EditableCard.Description = DetailEditText.GetText()
 			go editCard()
 			CardsMap[EditableCard.Id] = EditableCard
 			DetailText.SetText(deck_markdown.GetMarkDownDescription(utils.FormatDescription(EditableCard.Description), configuration))
-			deck_ui.BuildFullFlex(DetailText)
+			deck_ui.BuildFullFlex(DetailText, nil)
 		}
 		return event
 	})
@@ -305,7 +310,7 @@ func BuildAddForm() (*tview.Form, *deck_structs.Card) {
 	addForm.SetLabelColor(utils.GetColor(configuration.Color))
 	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
 			return nil
 		}
 		return event
@@ -343,7 +348,7 @@ func AddCard(actualList *tview.List, card deck_structs.Card) {
 	}
 	DetailText.SetTitle(fmt.Sprintf(" %s ", newCard.Title))
 	DetailText.SetText(utils.FormatDescription(newCard.Description))
-	deck_ui.BuildFullFlex(DetailText)
+	deck_ui.BuildFullFlex(DetailText, err)
 }
 
 func editCard() {
@@ -471,7 +476,7 @@ func BuildStacks() {
 			description := utils.FormatDescription(CardsMap[cardId].Description)
 			DetailText.SetText(deck_markdown.GetMarkDownDescription(description, configuration))
 			EditableCard = CardsMap[cardId]
-			deck_ui.BuildFullFlex(DetailText)
+			deck_ui.BuildFullFlex(DetailText, nil)
 		})
 
 		todoList.SetFocusFunc(func() {

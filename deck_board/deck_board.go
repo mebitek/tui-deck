@@ -46,7 +46,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 	}
 	BoardList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
 		} else if event.Rune() == 97 {
 			// a -> add board
 			addForm, board := buildAddBoardForm(deck_structs.Board{})
@@ -54,7 +54,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 				addBoard(*board)
 			})
 
-			deck_ui.BuildFullFlex(addForm)
+			deck_ui.BuildFullFlex(addForm, nil)
 		} else if event.Rune() == 101 {
 			// e -> edit board
 			selectedBoardIndex := BoardList.GetCurrentItem()
@@ -71,7 +71,10 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 
 			editForm, editedBoard := buildAddBoardForm(board)
 			editForm.AddButton("Save", func() {
-				go editBoard(*editedBoard)
+				var err error
+				go func() {
+					err = editBoard(*editedBoard)
+				}()
 				BoardList.SetItemText(selectedBoardIndex, fmt.Sprintf("[#%s]#%d - %s", editedBoard.Color, editedBoard.Id, editedBoard.Title), "")
 				for i, b := range Boards {
 					if b.Id == editedBoard.Id {
@@ -79,9 +82,9 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 						break
 					}
 				}
-				deck_ui.BuildFullFlex(BoardFlex)
+				deck_ui.BuildFullFlex(BoardFlex, err)
 			})
-			deck_ui.BuildFullFlex(editForm)
+			deck_ui.BuildFullFlex(editForm, nil)
 		} else if event.Rune() == 100 {
 			// d -> delete board
 			selectedBoardIndex := BoardList.GetCurrentItem()
@@ -174,7 +177,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 						addLabel(*label, &board, actualLabelList)
 					})
 
-					deck_ui.BuildFullFlex(addForm)
+					deck_ui.BuildFullFlex(addForm, nil)
 				} else if event.Rune() == 101 {
 					// e -> edit label
 
@@ -193,7 +196,10 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 					editForm, editedLabel := buildAddLabelForm(label)
 					editForm.AddButton("Save", func() {
 						board.Updated = true
-						go editLabel(boardId, *editedLabel)
+						var err error
+						go func() {
+							err = editLabel(boardId, *editedLabel)
+						}()
 						actualLabelList.SetItemText(selectedLabelIndex, fmt.Sprintf("[#%s]#%d - %s", editedLabel.Color, editedLabel.Id, editedLabel.Title), "")
 						for i, l := range board.Labels {
 							if l.Id == editedLabel.Id {
@@ -201,9 +207,9 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 								break
 							}
 						}
-						deck_ui.BuildFullFlex(EditTagsFlex)
+						deck_ui.BuildFullFlex(EditTagsFlex, err)
 					})
-					deck_ui.BuildFullFlex(editForm)
+					deck_ui.BuildFullFlex(editForm, nil)
 				}
 				return event
 			})
@@ -215,7 +221,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 			EditTagsFlex.AddItem(actualLabelList, 0, 1, true)
 			EditTagsFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 				if event.Key() == tcell.KeyEsc {
-					deck_ui.BuildFullFlex(BoardFlex)
+					deck_ui.BuildFullFlex(BoardFlex, nil)
 					return nil
 				} else if event.Rune() == 63 {
 					// ? deck_help menu
@@ -223,7 +229,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 				}
 				return event
 			})
-			deck_ui.BuildFullFlex(EditTagsFlex)
+			deck_ui.BuildFullFlex(EditTagsFlex, nil)
 
 		} else if event.Rune() == 63 {
 			// ? deck_help menu
@@ -246,7 +252,7 @@ func BuildSwitchBoard(configuration utils.Configuration) {
 			deck_ui.FooterBar.SetText(fmt.Sprintf("Error getting stacks: %s", err.Error()))
 		}
 		deck_card.BuildStacks()
-		deck_ui.BuildFullFlex(deck_ui.MainFlex)
+		deck_ui.BuildFullFlex(deck_ui.MainFlex, err)
 	})
 }
 
@@ -261,16 +267,18 @@ func addBoard(board deck_structs.Board) {
 	Boards = append(Boards, newBoard)
 	BoardList.AddItem(fmt.Sprintf("[#%s]#%d - %s", newBoard.Color, newBoard.Id, newBoard.Title), "", rune(0), nil)
 
-	deck_ui.BuildFullFlex(BoardFlex)
+	deck_ui.BuildFullFlex(BoardFlex, err)
 }
 
-func editBoard(board deck_structs.Board) {
+func editBoard(board deck_structs.Board) error {
 	jsonBody := fmt.Sprintf(`{"title":"%s", "color": "%s"}`, board.Title, board.Color)
 	var err error
 	_, err = deck_http.EditBoard(board.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+		return err
 	}
+	return nil
 }
 
 func DeleteLabel(boardId int, labelId int) {
@@ -287,6 +295,7 @@ func addLabel(label deck_structs.Label, board *deck_structs.Board, actualLabelLi
 	newLabel, err = deck_http.AddBoardLabel(board.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+		return
 	}
 	board.Labels = append(board.Labels, newLabel)
 
@@ -299,16 +308,18 @@ func addLabel(label deck_structs.Label, board *deck_structs.Board, actualLabelLi
 
 	actualLabelList.AddItem(fmt.Sprintf("[#%s]#%d - %s", newLabel.Color, newLabel.Id, newLabel.Title), "", rune(0), nil)
 
-	deck_ui.BuildFullFlex(EditTagsFlex)
+	deck_ui.BuildFullFlex(EditTagsFlex, err)
 }
 
-func editLabel(boardId int, label deck_structs.Label) {
+func editLabel(boardId int, label deck_structs.Label) error {
 	jsonBody := fmt.Sprintf(`{"title":"%s", "color": "%s"}`, label.Title, label.Color)
 	var err error
 	_, err = deck_http.EditBoardLabel(boardId, label.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+		return err
 	}
+	return nil
 }
 
 func buildAddLabelForm(l deck_structs.Label) (*tview.Form, *deck_structs.Label) {
@@ -328,7 +339,7 @@ func buildAddLabelForm(l deck_structs.Label) (*tview.Form, *deck_structs.Label) 
 	addForm.SetLabelColor(utils.GetColor(configuration.Color))
 	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(EditTagsFlex)
+			deck_ui.BuildFullFlex(EditTagsFlex, nil)
 			return nil
 		}
 		return event
@@ -360,7 +371,7 @@ func buildAddBoardForm(b deck_structs.Board) (*tview.Form, *deck_structs.Board) 
 	addForm.SetLabelColor(utils.GetColor(configuration.Color))
 	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			deck_ui.BuildFullFlex(deck_ui.MainFlex)
+			deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
 			return nil
 		}
 		return event
