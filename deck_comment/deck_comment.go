@@ -251,6 +251,20 @@ func DeleteComment(cardId int, commentId int) {
 			for _, k := range CommentTreeStructMap {
 				node := findById(k, commentId)
 				if node != nil {
+
+					list := make([]*deck_structs.Comment, 0)
+					list = findReplies(node, list)
+
+					go func() {
+						for _, c := range list {
+							_, err := deck_http.DeleteComment(cardId, c.Id, configuration)
+							if err != nil {
+								deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting comment: %s", err.Error()))
+								break
+							}
+						}
+					}()
+
 					node.remove()
 					break
 				}
@@ -265,6 +279,20 @@ func DeleteComment(cardId int, commentId int) {
 	})
 	deck_ui.FullFlex.AddItem(Modal, 0, 0, false)
 	app.SetFocus(Modal)
+}
+
+func findReplies(node *CommentStruct, list []*deck_structs.Comment) []*deck_structs.Comment {
+	if len(node.Replies) == 0 {
+		return list
+	}
+
+	for _, r := range node.Replies {
+		list = append(list, &r.Comment)
+		if r.Replies != nil {
+			return findReplies(r, list)
+		}
+	}
+	return list
 }
 
 func findById(root *CommentStruct, id int) *CommentStruct {
