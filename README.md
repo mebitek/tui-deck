@@ -27,6 +27,7 @@ ___
 * italic
 * bold + italic
 * inline code 
+* links
 
 # planned features
 

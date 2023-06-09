@@ -35,9 +35,17 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 			} else {
 				line = fmt.Sprintf("[-:-:-]%s\n", strings.ReplaceAll(line, "```", ""))
 			}
+		} else if len(checkLink(line)) > 0 {
+			result := checkLink(line)
+			for _, r := range result {
+				rTmp := strings.ReplaceAll(r[1], "[", "")
+				r[1] = strings.ReplaceAll(rTmp, "]", "")
+				line = fmt.Sprintf("%s", strings.ReplaceAll(line, r[0], fmt.Sprintf("[#00ffaf]%s [#5f5fff:-:u]%s[-:-:-]", strings.ReplaceAll(r[1], "[", ""), r[2])))
+			}
 		} else {
 			line = fmt.Sprintf("%s\n", tview.Escape(line))
 		}
+
 		// bold + italic
 		result := getStringInBetween(line, "\\*\\*\\*", "\\*\\*\\*")
 		if len(result) > 0 {
@@ -71,6 +79,7 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 			}
 			line = fmt.Sprintf("%s", strings.ReplaceAll(line, "`", ""))
 		}
+
 		lineContainer = lineContainer + fmt.Sprintf("%s", line)
 	}
 
@@ -79,6 +88,16 @@ func GetMarkDownDescription(text string, configuration utils.Configuration) stri
 
 func getStringInBetween(str string, start string, end string) (result [][]string) {
 	re := regexp.MustCompile("(" + start + `(.*?)` + end + ")")
+	match := re.FindAllStringSubmatch(str, -1)
+	if len(match) > 0 {
+		return match
+	} else {
+		return
+	}
+}
+
+func checkLink(str string) (result [][]string) {
+	re := regexp.MustCompile(`(\[[^][]+])\((https?:\/\/[^()]+)\)`)
 	match := re.FindAllStringSubmatch(str, -1)
 	if len(match) > 0 {
 		return match
