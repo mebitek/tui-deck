@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sort"
+	"time"
 	"tui-deck/deck_comment"
 	"tui-deck/deck_help"
 	"tui-deck/deck_http"
@@ -215,12 +216,22 @@ func BuildCardViewer() {
 
 			deck_ui.BuildFullFlex(EditTagsFlex, nil)
 		} else if event.Rune() == 116 {
+			// t -> edit detail
+			var form *tview.Form
+			form, card := BuildDetailForm(&EditableCard)
+			EditableCard = *card
 
-			form, EditableCard := BuildTitleForm(EditableCard)
 			form.AddButton("Save", func() {
 				go editCard()
-				CardsMap[EditableCard.Id] = *EditableCard
+				if len(EditableCard.DueDate) > 0 {
+					pattern := "02/01/2006 15:04"
+					parse, _ := time.Parse(pattern, EditableCard.DueDate)
+					EditableCard.DueDate = parse.Format("2006-01-02T15:04:05+00:00")
+				}
+				CardsMap[EditableCard.Id] = EditableCard
 				DetailText.SetTitle(fmt.Sprintf(" %s ", EditableCard.Title))
+				updateStacks()
+				BuildStacks()
 				deck_ui.BuildFullFlex(DetailText, nil)
 			})
 			deck_ui.BuildFullFlex(form, nil)
@@ -335,12 +346,26 @@ func BuildAddForm() (*tview.Form, *deck_structs.Card) {
 		card.Description = description
 	})
 
+	addForm.AddInputField("Due Date", "", 18, func(textToCheck string, lastChar rune) bool {
+
+		//re := regexp.MustCompile(`[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}`)
+		//match := re.FindAllStringSubmatch(textToCheck, -1)
+		//return len(match) > 0
+		if (lastChar >= rune(47) && lastChar <= rune(58)) || lastChar == rune(32) {
+			return true
+		}
+		return false
+
+	}, func(date string) {
+		card.DueDate = date
+	})
+
 	return addForm, &card
 }
 
-func BuildTitleForm(card deck_structs.Card) (*tview.Form, *deck_structs.Card) {
+func BuildDetailForm(card *deck_structs.Card) (*tview.Form, *deck_structs.Card) {
 	addForm := tview.NewForm()
-	addForm.SetTitle(" Edit Card Title ")
+	addForm.SetTitle(" Edit Card Details ")
 	addForm.SetBorder(true)
 	addForm.SetBorderColor(utils.GetColor(configuration.Color))
 	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
@@ -358,21 +383,50 @@ func BuildTitleForm(card deck_structs.Card) (*tview.Form, *deck_structs.Card) {
 		card.Title = title
 	})
 
-	return addForm, &card
+	dueDate := ""
+	if len(card.DueDate) > 0 {
+		parse, _ := time.Parse("2006-01-02T15:04:05+00:00", card.DueDate)
+		card.DueDate = parse.Format("02/01/2006 15:04")
+		dueDate = fmt.Sprintf("%s", card.DueDate)
+	}
+
+	addForm.AddInputField("Due Date", dueDate, 18, func(textToCheck string, lastChar rune) bool {
+
+		//re := regexp.MustCompile(`[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}`)
+		//match := re.FindAllStringSubmatch(textToCheck, -1)
+		//return len(match) > 0
+		if (lastChar >= rune(47) && lastChar <= rune(58)) || lastChar == rune(32) {
+			return true
+		}
+		return false
+
+	}, func(date string) {
+		card.DueDate = date
+	})
+
+	return addForm, card
 }
 
 func AddCard(actualList *tview.List, card deck_structs.Card) {
 	var stackIndex, stack, _ = deck_stack.GetActualStack(actualList)
 
-	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "type": "plain", "order": 0}`, utils.CleanText(card.Title), utils.CleanText(card.Description))
+	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "duedate": "%s", "type": "plain", "order": 0}`, utils.CleanText(card.Title), utils.CleanText(card.Description), card.DueDate)
 	var newCard deck_structs.Card
 	var err error
 	newCard, err = deck_http.AddCard(currentBoard.Id, stack.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error crating new card: %s", err.Error()))
+		return
 	}
 
-	actualList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, newCard.Id, newCard.Title), "", rune(0), nil)
+	dueDate := ""
+	if len(card.DueDate) > 0 {
+		parse, _ := time.Parse("2006-01-02T15:04:05+00:00", newCard.DueDate)
+		newCard.DueDate = parse.Format("02/01/2006 15:04")
+		dueDate = fmt.Sprintf("(%s)", newCard.DueDate)
+	}
+
+	actualList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s [red:-:-]%s[white]", configuration.Color, newCard.Id, newCard.Title, dueDate), "", rune(0), nil)
 	CardsMap[newCard.Id] = newCard
 	DetailText.Clear()
 	EditableCard = newCard
@@ -390,8 +444,10 @@ func AddCard(actualList *tview.List, card deck_structs.Card) {
 func editCard() {
 	description := utils.CleanText(EditableCard.Description)
 	title := utils.CleanText(EditableCard.Title)
-
 	jsonBody := fmt.Sprintf(`{"description": "%s", "title": "%s", "type": "plain", "owner":"%s"}`, utils.CleanText(description), utils.CleanText(title), configuration.User)
+	if len(EditableCard.DueDate) > 0 {
+		jsonBody = fmt.Sprintf(`{"description": "%s", "title": "%s", "duedate": "%s", "type": "plain", "owner":"%s"}`, utils.CleanText(description), utils.CleanText(title), EditableCard.DueDate, configuration.User)
+	}
 	var err error
 	_, err = deck_http.UpdateCard(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
 	if err != nil {
@@ -498,7 +554,15 @@ func BuildStacks() {
 		for _, card := range s.Cards {
 			var labels = utils.BuildLabels(card)
 			CardsMap[card.Id] = card
-			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
+
+			dueDate := ""
+			if len(card.DueDate) > 0 {
+				parse, _ := time.Parse("2006-01-02T15:04:05+00:00", card.DueDate)
+				card.DueDate = parse.Format("02/01/2006 15:04")
+				dueDate = fmt.Sprintf("(%s)", card.DueDate)
+			}
+
+			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] - %s [red:-:-]%s[white]", configuration.Color, card.Id, card.Title, dueDate), labels, rune(0), nil)
 		}
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {

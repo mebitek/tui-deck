@@ -33,6 +33,7 @@ type Card struct {
 	StackId     int     `json:"stackId"`
 	Order       int     `json:"order"`
 	Type        string  `json:"type"`
+	DueDate     string  `json:"duedate"`
 }
 
 type Label struct {

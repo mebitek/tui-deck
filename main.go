@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"os"
+	"time"
 	"tui-deck/deck_board"
 	"tui-deck/deck_card"
 	"tui-deck/deck_comment"
@@ -116,8 +117,15 @@ func main() {
 			}
 			actualList := app.GetFocus().(*tview.List)
 			addForm, card := deck_card.BuildAddForm()
-			//TODO add due Date input field
 			addForm.AddButton("Save", func() {
+				dueDate := card.DueDate
+				pattern := "02/01/2006 15:04"
+				parse, err2 := time.Parse(pattern, dueDate)
+				if err2 != nil {
+					deck_ui.FooterBar.SetText(fmt.Sprintf("Not a valid date, format must be dd/MM/YYYY HH:mm: %s", err2.Error()))
+					return
+				}
+				card.DueDate = parse.Format("2006-01-02T15:04:05+00:00")
 				deck_card.AddCard(actualList, *card)
 			})
 			deck_ui.BuildFullFlex(addForm, nil)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 	"tui-deck/deck_structs"
@@ -93,7 +94,8 @@ func AddCard(boardId int, stackId int, jsonBody string, configuration utils.Conf
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards", configuration.Url, boardId, stackId),
 		configuration.User, configuration.Password, false)
 	if err != nil {
-		return deck_structs.Card{}, err
+		b, _ := io.ReadAll(call.Body)
+		return deck_structs.Card{}, fmt.Errorf(string(b))
 
 	}
 	decoder := json.NewDecoder(call.Body)
@@ -113,8 +115,8 @@ func UpdateCard(boardId int, stackId int, cardId int, jsonBody string, configura
 		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d", configuration.Url, boardId, stackId, cardId),
 		configuration.User, configuration.Password, false)
 	if err != nil {
-		return deck_structs.Card{}, err
-
+		b, _ := io.ReadAll(call.Body)
+		return deck_structs.Card{}, fmt.Errorf(string(b))
 	}
 	decoder := json.NewDecoder(call.Body)
 	var card deck_structs.Card
