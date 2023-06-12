@@ -131,8 +131,8 @@ func BuildCardViewer() {
 			deck_comment.CommentTree.SetTitle(fmt.Sprintf(" %s- COMMENTS ", DetailText.GetTitle()))
 			deck_ui.BuildFullFlex(deck_comment.CommentTree, nil)
 
-		} else if event.Rune() == 116 {
-			// t -> tags
+		} else if event.Rune() == 108 {
+			// l -> labels
 			EditTagsFlex.Clear()
 			actualLabelList := tview.NewList()
 			actualLabelList.SetBorder(true)
@@ -214,6 +214,16 @@ func BuildCardViewer() {
 			})
 
 			deck_ui.BuildFullFlex(EditTagsFlex, nil)
+		} else if event.Rune() == 116 {
+
+			form, EditableCard := BuildTitleForm(EditableCard)
+			form.AddButton("Save", func() {
+				go editCard()
+				CardsMap[EditableCard.Id] = *EditableCard
+				DetailText.SetTitle(fmt.Sprintf(" %s ", EditableCard.Title))
+				deck_ui.BuildFullFlex(DetailText, nil)
+			})
+			deck_ui.BuildFullFlex(form, nil)
 		} else if event.Rune() == 63 {
 			// ? -> deck_help menu
 			deck_ui.BuildHelp(DetailText, deck_help.HelpView)
@@ -323,6 +333,29 @@ func BuildAddForm() (*tview.Form, *deck_structs.Card) {
 	})
 	addForm.AddTextArea("Description", "", 60, 10, 300, func(description string) {
 		card.Description = description
+	})
+
+	return addForm, &card
+}
+
+func BuildTitleForm(card deck_structs.Card) (*tview.Form, *deck_structs.Card) {
+	addForm := tview.NewForm()
+	addForm.SetTitle(" Edit Card Title ")
+	addForm.SetBorder(true)
+	addForm.SetBorderColor(utils.GetColor(configuration.Color))
+	addForm.SetButtonBackgroundColor(utils.GetColor(configuration.Color))
+	addForm.SetFieldBackgroundColor(tcell.ColorWhite)
+	addForm.SetFieldTextColor(tcell.ColorBlack)
+	addForm.SetLabelColor(utils.GetColor(configuration.Color))
+	addForm.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			deck_ui.BuildFullFlex(deck_ui.MainFlex, nil)
+			return nil
+		}
+		return event
+	})
+	addForm.AddInputField("Title", card.Title, 20, nil, func(title string) {
+		card.Title = title
 	})
 
 	return addForm, &card

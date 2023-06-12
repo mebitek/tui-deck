@@ -81,7 +81,8 @@ on first start, the application will create a default config.json file in $HOME/
     | function | key                   |
     |----------|-----------------------|
     | e        | edit card description |
-    | t        | edit card labels      |
+    | l        | edit card labels      |
+    | t        | edit card title       |
     | c        | view comments         |
     | ESC      | back to main view     |
 

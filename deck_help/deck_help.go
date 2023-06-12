@@ -52,7 +52,8 @@ func getHelp2() *tview.TextView {
 		SetText(`[green]View Card[white]
 
 [yellow]e[white]: Edit card Description.
-[yellow]t[white]: Edit card tags.
+[yellow]l[white]: Edit card labels.
+[yellow]t[white]: Edit card title.
 [yellow]c[white]: View comments.
 [yellow]ESC[white]: Back to main view.
 
