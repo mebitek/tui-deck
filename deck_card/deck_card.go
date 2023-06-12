@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sort"
+	"strconv"
 	"time"
 	"tui-deck/deck_comment"
 	"tui-deck/deck_help"
@@ -360,6 +361,16 @@ func BuildAddForm() (*tview.Form, *deck_structs.Card) {
 		card.DueDate = date
 	})
 
+	addForm.AddInputField("Order", "0", 5, func(textToCheck string, lastChar rune) bool {
+		if lastChar < 48 || lastChar > 57 {
+			return false
+		}
+		return true
+	}, func(order string) {
+		orderInt, _ := strconv.Atoi(order)
+		card.Order = orderInt
+	})
+
 	return addForm, &card
 }
 
@@ -404,13 +415,23 @@ func BuildDetailForm(card *deck_structs.Card) (*tview.Form, *deck_structs.Card) 
 		card.DueDate = date
 	})
 
+	addForm.AddInputField("Order", strconv.Itoa(card.Order), 5, func(textToCheck string, lastChar rune) bool {
+		if lastChar < 48 || lastChar > 57 {
+			return false
+		}
+		return true
+	}, func(order string) {
+		orderInt, _ := strconv.Atoi(order)
+		card.Order = orderInt
+	})
+
 	return addForm, card
 }
 
 func AddCard(actualList *tview.List, card deck_structs.Card) {
 	var stackIndex, stack, _ = deck_stack.GetActualStack(actualList)
 
-	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "duedate": "%s", "type": "plain", "order": 0}`, utils.CleanText(card.Title), utils.CleanText(card.Description), card.DueDate)
+	jsonBody := fmt.Sprintf(`{"title":"%s", "description": "%s", "duedate": "%s", "type": "plain", "order": %d}`, utils.CleanText(card.Title), utils.CleanText(card.Description), card.DueDate, card.Order)
 	var newCard deck_structs.Card
 	var err error
 	newCard, err = deck_http.AddCard(currentBoard.Id, stack.Id, jsonBody, configuration)
@@ -426,7 +447,7 @@ func AddCard(actualList *tview.List, card deck_structs.Card) {
 		dueDate = fmt.Sprintf("(%s)", newCard.DueDate)
 	}
 
-	actualList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s [red:-:-]%s[white]", configuration.Color, newCard.Id, newCard.Title, dueDate), "", rune(0), nil)
+	actualList.InsertItem(card.Order, fmt.Sprintf("[%s]#%d[white] - %s [red:-:-]%s[white]", configuration.Color, newCard.Id, newCard.Title, dueDate), "", rune(0), nil)
 	CardsMap[newCard.Id] = newCard
 	DetailText.Clear()
 	EditableCard = newCard
@@ -549,6 +570,10 @@ func BuildStacks() {
 				return nil
 			}
 			return event
+		})
+
+		sort.Slice(s.Cards, func(i, j int) bool {
+			return s.Cards[i].Order < s.Cards[j].Order
 		})
 
 		for _, card := range s.Cards {
