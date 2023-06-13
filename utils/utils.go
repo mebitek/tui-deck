@@ -134,3 +134,16 @@ func CleanText(text string) string {
 	t1 := strings.ReplaceAll(text, "\"", "\\\"")
 	return strings.ReplaceAll(t1, "\n", `\n`)
 }
+
+func CommaString(a []string) string {
+	res := ""
+	for index, j := range a {
+		if len(a) == index+1 {
+			res = res + fmt.Sprintf("%v", j)
+		} else {
+			res = res + fmt.Sprintf("%v,", j)
+		}
+
+	}
+	return res
+}

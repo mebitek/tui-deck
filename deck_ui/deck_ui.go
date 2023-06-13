@@ -7,7 +7,7 @@ import (
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.5.12"
+const VERSION = "v0.5.13"
 
 var FullFlex = tview.NewFlex()
 var MainFlex = tview.NewFlex()

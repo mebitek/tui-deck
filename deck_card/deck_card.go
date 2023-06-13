@@ -318,7 +318,25 @@ func moveCardToStack(todoList *tview.List, primitive *tview.Primitive, key tcell
 
 	destList := deck_ui.GetNextFocus(actualPrimitiveIndex + operator).(*tview.List)
 	todoList.RemoveItem(i)
-	destList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] - %s ", configuration.Color, card.Id, card.Title), labels, rune(0), nil)
+
+	dueDate := ""
+	if len(card.DueDate) > 0 {
+		parse, _ := time.Parse("2006-01-02T15:04:05+00:00", card.DueDate)
+		card.DueDate = parse.Format("02/01/2006 15:04")
+		dueDate = fmt.Sprintf("- [red:-:-](%s)[white]", card.DueDate)
+	}
+
+	assigners := make([]string, 0)
+	for _, o := range card.AssignedUsers {
+		assigners = append(assigners, o.Participant.GetAbbrv())
+	}
+
+	assignersFormatter := ""
+	if len(assigners) > 0 {
+		assignersFormatter = fmt.Sprintf("- [red:gray:-]%s[-:-:-] ", utils.CommaString(assigners))
+	}
+
+	destList.InsertItem(0, fmt.Sprintf("[%s]#%d[white] %s- %s %s", configuration.Color, card.Id, assignersFormatter, card.Title, dueDate), labels, rune(0), nil)
 	destList.SetCurrentItem(0)
 	app.SetFocus(destList)
 }
@@ -465,10 +483,11 @@ func AddCard(actualList *tview.List, card deck_structs.Card) {
 func editCard() {
 	description := utils.CleanText(EditableCard.Description)
 	title := utils.CleanText(EditableCard.Title)
-	jsonBody := fmt.Sprintf(`{"description": "%s", "title": "%s", "type": "plain", "owner":"%s"}`, utils.CleanText(description), utils.CleanText(title), configuration.User)
+	dueDateFormat := ""
 	if len(EditableCard.DueDate) > 0 {
-		jsonBody = fmt.Sprintf(`{"description": "%s", "title": "%s", "duedate": "%s", "type": "plain", "owner":"%s"}`, utils.CleanText(description), utils.CleanText(title), EditableCard.DueDate, configuration.User)
+		dueDateFormat = fmt.Sprintf(`,"duedate": "%s"`, EditableCard.DueDate)
 	}
+	jsonBody := fmt.Sprintf(`{"description": "%s", "title": "%s", "type": "plain", "owner":"%s"%s}`, utils.CleanText(description), utils.CleanText(title), configuration.User, dueDateFormat)
 	var err error
 	_, err = deck_http.UpdateCard(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
 	if err != nil {
@@ -584,10 +603,20 @@ func BuildStacks() {
 			if len(card.DueDate) > 0 {
 				parse, _ := time.Parse("2006-01-02T15:04:05+00:00", card.DueDate)
 				card.DueDate = parse.Format("02/01/2006 15:04")
-				dueDate = fmt.Sprintf("(%s)", card.DueDate)
+				dueDate = fmt.Sprintf("- [red:-:-](%s)[white]", card.DueDate)
 			}
 
-			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] - %s [red:-:-]%s[white]", configuration.Color, card.Id, card.Title, dueDate), labels, rune(0), nil)
+			assigners := make([]string, 0)
+			for _, o := range card.AssignedUsers {
+				assigners = append(assigners, o.Participant.GetAbbrv())
+			}
+
+			assignersFormatter := ""
+			if len(assigners) > 0 {
+				assignersFormatter = fmt.Sprintf("- [red:gray:-]%s[-:-:-] ", utils.CommaString(assigners))
+			}
+
+			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] %s- %s %s", configuration.Color, card.Id, assignersFormatter, card.Title, dueDate), labels, rune(0), nil)
 		}
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {

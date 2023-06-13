@@ -77,6 +77,7 @@ func GetStacks(boardId int, configuration utils.Configuration) ([]deck_structs.S
 		return nil, err
 
 	}
+
 	decoder := json.NewDecoder(call.Body)
 	var stacks []deck_structs.Stack
 
@@ -433,4 +434,25 @@ func DeleteComment(cardId int, commentId int, configuration utils.Configuration)
 		return call.StatusCode, err
 	}
 	return call.StatusCode, nil
+}
+
+func GetUsers(configuration utils.Configuration) (deck_structs.Users, error) {
+
+	call, err := httpCall(nil, http.MethodGet, fmt.Sprintf("%s/ocs/v2.php/cloud/users", configuration.Url),
+		configuration.User, configuration.Password, true)
+
+	if err != nil {
+		return deck_structs.Users{}, err
+
+	}
+
+	var ocs deck_structs.OcsResponseUsers
+
+	decoder := json.NewDecoder(call.Body)
+
+	err = decoder.Decode(&ocs)
+	if err != nil {
+		panic(err)
+	}
+	return ocs.Ocs.Data, nil
 }

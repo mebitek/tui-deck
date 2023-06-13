@@ -1,9 +1,23 @@
 package deck_structs
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Owner struct {
 	PrimaryKey  string `json:"primaryKey"`
 	Uid         string `json:"uid"`
 	DisplayName string `json:"displayName"`
+}
+
+func (owner *Owner) GetAbbrv() string {
+	split := strings.Split(owner.DisplayName, " ")
+
+	if len(split) > 1 {
+		return strings.ToUpper(fmt.Sprintf("%c%c", split[0][0], split[1][0]))
+	}
+	return strings.ToUpper(fmt.Sprintf("%c", owner.DisplayName[0]))
 }
 
 type Board struct {
@@ -26,14 +40,22 @@ type Stack struct {
 }
 
 type Card struct {
-	Id          int     `json:"id"`
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Labels      []Label `json:"labels"`
-	StackId     int     `json:"stackId"`
-	Order       int     `json:"order"`
-	Type        string  `json:"type"`
-	DueDate     string  `json:"duedate"`
+	Id            int            `json:"id"`
+	Title         string         `json:"title"`
+	Description   string         `json:"description"`
+	Labels        []Label        `json:"labels"`
+	StackId       int            `json:"stackId"`
+	Order         int            `json:"order"`
+	Type          string         `json:"type"`
+	DueDate       string         `json:"duedate"`
+	AssignedUsers []AssignedUser `json:"assignedUsers"`
+}
+
+type AssignedUser struct {
+	Id          int   `json:"id"`
+	CardId      int   `json:"cardId"`
+	Type        int   `json:"type"`
+	Participant Owner `json:"participant"`
 }
 
 type Label struct {
@@ -50,6 +72,10 @@ type OcsResponseSingle struct {
 	Ocs OcsSingle `json:"ocs"`
 }
 
+type OcsResponseUsers struct {
+	Ocs OcsUsers `json:"ocs"`
+}
+
 type Ocs struct {
 	Meta Meta      `json:"meta"`
 	Data []Comment `json:"data"`
@@ -57,6 +83,15 @@ type Ocs struct {
 type OcsSingle struct {
 	Meta Meta    `json:"meta"`
 	Data Comment `json:"data"`
+}
+
+type OcsUsers struct {
+	Meta Meta  `json:"meta"`
+	Data Users `json:"data"`
+}
+
+type Users struct {
+	Users []string
 }
 
 type Meta struct {
