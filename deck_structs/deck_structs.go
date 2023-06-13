@@ -30,6 +30,7 @@ type Board struct {
 	Updated        bool    `json:"-"`
 	CreateDefaults bool    `json:"-"`
 	DeletedAt      int     `json:"deletedAt"`
+	Users          []Owner `json:"users"`
 }
 
 type Stack struct {

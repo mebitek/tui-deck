@@ -20,6 +20,7 @@ import (
 var DetailText *tview.TextView
 var DetailEditText *tview.TextArea
 var EditTagsFlex *tview.Flex
+var EditUsersFlex *tview.Flex
 var Modal *tview.Modal
 
 var CardsMap = make(map[int]deck_structs.Card)
@@ -38,6 +39,7 @@ func Init(application *tview.Application, conf utils.Configuration, board deck_s
 	DetailText = tview.NewTextView()
 	DetailEditText = tview.NewTextArea()
 	EditTagsFlex = tview.NewFlex()
+	EditUsersFlex = tview.NewFlex()
 
 	Modal = tview.NewModal()
 	currentBoard = board
@@ -216,6 +218,111 @@ func BuildCardViewer() {
 			})
 
 			deck_ui.BuildFullFlex(EditTagsFlex, nil)
+
+		} else if event.Rune() == 117 {
+			// u -> edit users
+			EditUsersFlex.Clear()
+			actualUserList := tview.NewList()
+			actualUserList.SetBorder(true)
+			actualUserList.SetTitle(" delete user ")
+			actualUserList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyTab {
+					return nil
+				}
+				return event
+			})
+			for _, user := range EditableCard.AssignedUsers {
+				actualUserList.AddItem(fmt.Sprintf("%s", user.Participant.DisplayName), "",
+					rune(0), nil)
+			}
+			actualUserList.SetSelectedFunc(func(index int, name string, secondName string, rune rune) {
+				user := EditableCard.AssignedUsers[index]
+				// delete user
+				jsonBody := fmt.Sprintf(`{"userId": "%s"}`, user.Participant.Uid)
+				go DeleteUser(jsonBody)
+				EditableCard.AssignedUsers = append(EditableCard.AssignedUsers[:index], EditableCard.AssignedUsers[index+1:]...)
+				CardsMap[EditableCard.Id] = EditableCard
+				actualUserList.RemoveItem(index)
+
+				updateStacks()
+				BuildStacks()
+				app.SetFocus(actualUserList)
+
+			})
+
+			userList := tview.NewList()
+			userList.SetBorder(true)
+			userList.SetTitle(" add users")
+			userList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyTab {
+					return nil
+				}
+				return event
+			})
+			for _, user := range currentBoard.Users {
+				userList.AddItem(fmt.Sprintf("%s", user.DisplayName), "",
+					rune(0), nil)
+			}
+
+			userList.SetSelectedFunc(func(index int, name string, secondName string, rune rune) {
+				user := currentBoard.Users[index]
+
+				for _, u := range EditableCard.AssignedUsers {
+					if u.Participant.Uid == user.Uid {
+						deck_ui.FooterBar.SetText("user already assigned")
+						return
+					}
+				}
+
+				jsonBody := fmt.Sprintf(`{"userId": "%s" }`, user.Uid)
+				go AssignUser(jsonBody)
+
+				au := deck_structs.AssignedUser{
+					CardId: EditableCard.Id,
+					Type:   0,
+					Participant: deck_structs.Owner{
+						PrimaryKey:  user.PrimaryKey,
+						Uid:         user.Uid,
+						DisplayName: user.DisplayName,
+					},
+				}
+				EditableCard.AssignedUsers = append(EditableCard.AssignedUsers, au)
+				CardsMap[EditableCard.Id] = EditableCard
+				actualUserList.AddItem(fmt.Sprintf("%s", user.DisplayName), "",
+					rune, nil)
+				updateStacks()
+				BuildStacks()
+				app.SetFocus(userList)
+			})
+
+			EditUsersFlex.SetDirection(tview.FlexColumn)
+			EditUsersFlex.SetBorder(true)
+			EditUsersFlex.SetBorderColor(utils.GetColor(configuration.Color))
+			EditUsersFlex.SetTitle(fmt.Sprintf(" %s- EDIT Users ", DetailText.GetTitle()))
+
+			EditUsersFlex.AddItem(actualUserList, 0, 1, true)
+			EditUsersFlex.AddItem(userList, 0, 1, true)
+			EditUsersFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyEsc {
+					deck_ui.BuildFullFlex(DetailText, nil)
+					return nil
+				}
+				if event.Key() == tcell.KeyTab {
+					focus := app.GetFocus().(*tview.List)
+					if focus == actualUserList {
+						app.SetFocus(userList)
+					} else {
+						app.SetFocus(actualUserList)
+					}
+				} else if event.Rune() == 63 {
+					// ? deck_help menu
+					deck_ui.BuildHelp(EditUsersFlex, deck_help.HelpUsers)
+				}
+				return event
+			})
+
+			deck_ui.BuildFullFlex(EditUsersFlex, nil)
+
 		} else if event.Rune() == 116 {
 			// t -> edit detail
 			var form *tview.Form
@@ -545,7 +652,7 @@ func DeleteCard(cardId int, stack deck_structs.Stack, actualList *tview.List, cu
 func AssignLabel(jsonBody string) {
 	_, err := deck_http.AssignLabel(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
 	if err != nil {
-		deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting tag from card: %s", err.Error()))
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error assigning tag to card: %s", err.Error()))
 	}
 }
 
@@ -553,6 +660,19 @@ func DeleteLabel(jsonBody string) {
 	_, err := deck_http.DeleteLabel(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
 	if err != nil {
 		deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting tag from card: %s", err.Error()))
+	}
+}
+func AssignUser(jsonBody string) {
+	_, err := deck_http.AssignUser(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
+	if err != nil {
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error assigning user to card: %s", err.Error()))
+	}
+}
+
+func DeleteUser(jsonBody string) {
+	_, err := deck_http.DeleteUser(currentBoard.Id, EditableCard.StackId, EditableCard.Id, jsonBody, configuration)
+	if err != nil {
+		deck_ui.FooterBar.SetText(fmt.Sprintf("Error deleting user from card: %s", err.Error()))
 	}
 }
 

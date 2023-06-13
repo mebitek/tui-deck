@@ -82,6 +82,7 @@ on first start, the application will create a default config.json file in $HOME/
     |----------|-----------------------|
     | e        | edit card description |
     | l        | edit card labels      |
+    | u        | edit card labels      |
     | t        | edit card title       |
     | c        | view comments         |
     | ESC      | back to main view     |
@@ -99,9 +100,19 @@ on first start, the application will create a default config.json file in $HOME/
     |------------|--------------------------------------------------------------------------------------------------|
     | up arrow   | move up                                                                                          |
     | down arrow | move down                                                                                        |
-    | TAB        | switch between card labels and available board labels lists                                      |
+    | TAB        | switch between card labels and available board labels list                                       |
     | ENTER      | if card label has been selected, delete it. if available label has been selected, add it to card |
     | ESC        | back to view card                                                                                |
+
+* edit card users
+
+    | function   | key                                                                                            |
+    |------------|------------------------------------------------------------------------------------------------|
+    | up arrow   | move up                                                                                        |
+    | down arrow | move down                                                                                      |
+    | TAB        | switch between card users and available board users list                                       |
+    | ENTER      | if card user has been selected, delete it. if available user has been selected, add it to card |
+    | ESC        | back to view card                                                                              |
 
 * view comments 
 

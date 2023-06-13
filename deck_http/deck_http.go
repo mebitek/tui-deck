@@ -436,23 +436,43 @@ func DeleteComment(cardId int, commentId int, configuration utils.Configuration)
 	return call.StatusCode, nil
 }
 
-func GetUsers(configuration utils.Configuration) (deck_structs.Users, error) {
+func DeleteUser(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.AssignedUser, error) {
+	body := []byte(jsonBody)
 
-	call, err := httpCall(nil, http.MethodGet, fmt.Sprintf("%s/ocs/v2.php/cloud/users", configuration.Url),
-		configuration.User, configuration.Password, true)
-
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d/unassignUser", configuration.Url, boardId, stackId, cardId),
+		configuration.User, configuration.Password, false)
 	if err != nil {
-		return deck_structs.Users{}, err
+		return deck_structs.AssignedUser{}, err
 
 	}
-
-	var ocs deck_structs.OcsResponseUsers
-
 	decoder := json.NewDecoder(call.Body)
+	var user deck_structs.AssignedUser
 
-	err = decoder.Decode(&ocs)
+	err = decoder.Decode(&user)
 	if err != nil {
 		panic(err)
 	}
-	return ocs.Ocs.Data, nil
+	return user, nil
+}
+
+func AssignUser(boardId int, stackId int, cardId int, jsonBody string, configuration utils.Configuration) (deck_structs.AssignedUser, error) {
+	body := []byte(jsonBody)
+
+	call, err := httpCall(body, http.MethodPut,
+		fmt.Sprintf("%s/index.php/apps/deck/api/v1.1/boards/%d/stacks/%d/cards/%d/assignUser", configuration.Url, boardId, stackId, cardId),
+		configuration.User, configuration.Password, false)
+	if err != nil {
+		return deck_structs.AssignedUser{}, err
+
+	}
+
+	decoder := json.NewDecoder(call.Body)
+	var assingedUser deck_structs.AssignedUser
+
+	err = decoder.Decode(&assingedUser)
+	if err != nil {
+		panic(err)
+	}
+	return assingedUser, nil
 }

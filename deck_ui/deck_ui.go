@@ -7,7 +7,7 @@ import (
 	"tui-deck/utils"
 )
 
-const VERSION = "v0.5.13"
+const VERSION = "v0.5.14"
 
 var FullFlex = tview.NewFlex()
 var MainFlex = tview.NewFlex()
@@ -80,6 +80,10 @@ func BuildHelp(primitive tview.Primitive, helpView *tview.TextView) {
 				help.SetPrimitive(deck_help.HelpLabels)
 				return nil
 			case help.GetPrimitive() == deck_help.HelpLabels:
+				help.SetTitle(deck_help.HelpUsers.GetTitle())
+				help.SetPrimitive(deck_help.HelpUsers)
+				return nil
+			case help.GetPrimitive() == deck_help.HelpUsers:
 				help.SetTitle(deck_help.HelpComments.GetTitle())
 				help.SetPrimitive(deck_help.HelpComments)
 				return nil

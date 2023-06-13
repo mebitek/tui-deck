@@ -8,6 +8,7 @@ var HelpMain = tview.NewTextView()
 var HelpView = tview.NewTextView()
 var HelpEdit = tview.NewTextView()
 var HelpLabels = tview.NewTextView()
+var HelpUsers = tview.NewTextView()
 var HelpBoards = tview.NewTextView()
 var HelpComments = tview.NewTextView()
 
@@ -18,6 +19,7 @@ func InitHelp() {
 	HelpLabels = getHelp4()
 	HelpBoards = getHelp5()
 	HelpComments = getHelp6()
+	HelpUsers = getHelp7()
 }
 
 func getHelp() *tview.TextView {
@@ -53,6 +55,7 @@ func getHelp2() *tview.TextView {
 
 [yellow]e[white]: Edit card Description.
 [yellow]l[white]: Edit card labels.
+[yellow]u[white]: Edit card users.
 [yellow]t[white]: Edit card title.
 [yellow]c[white]: View comments.
 [yellow]ESC[white]: Back to main view.
@@ -82,8 +85,8 @@ func getHelp4() *tview.TextView {
 
 [yellow]Up arrow[white]: Move up.
 [yellow]Down arrow[white]: Move down.
-[yellow]TAB[white]: Switch between card labels and available labels lists.
-[yellow]ENTER[white]: If car label has been selected, delete it. If available label has been selected, add it to card
+[yellow]TAB[white]: Switch between card labels and available labels list.
+[yellow]ENTER[white]: If card label has been selected, delete it. If available label has been selected, add it to card
 [yellow]ESC[white]: Back to card view.
 
 [blue]Press Enter for more help, press Escape to return.`)
@@ -123,4 +126,20 @@ func getHelp6() *tview.TextView {
 [blue]Press Enter for more help, press Escape to return.`)
 	HelpComments.SetTitle(" HELP - View Comments ")
 	return HelpComments
+}
+
+func getHelp7() *tview.TextView {
+	HelpUsers = tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(`[green]Edit Card Users[white]
+
+[yellow]Up arrow[white]: Move up.
+[yellow]Down arrow[white]: Move down.
+[yellow]TAB[white]: Switch between card users and available users list.
+[yellow]ENTER[white]: If card user has been selected, delete it. If available user has been selected, add it to card
+[yellow]ESC[white]: Back to card view.
+
+[blue]Press Enter for more help, press Escape to return.`)
+	HelpUsers.SetTitle(" HELP - Edit Card Users ")
+	return HelpUsers
 }
