@@ -180,6 +180,14 @@ func BuildCardViewer() {
 
 			labelList.SetSelectedFunc(func(index int, name string, secondName string, rune rune) {
 				label := currentBoard.Labels[index]
+
+				for _, l := range EditableCard.Labels {
+					if l.Id == label.Id {
+						deck_ui.FooterBar.SetText("label already assigned")
+						return
+					}
+				}
+
 				jsonBody := fmt.Sprintf(`{"labelId": %d }`, label.Id)
 				go AssignLabel(jsonBody)
 				EditableCard.Labels = append(EditableCard.Labels, label)
