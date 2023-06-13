@@ -12,11 +12,15 @@ ___
 
 * switch between boards
 * list cards
-* edit card description
+* edit card description, title, due date
 * move cards between stacks
 * add/remove labels from cards
-* add/edit/remove labels from labels
+* add/edit/remove stacks
+* add/edit/remove boards
+* add/edit/remove boards labels
 * basic markdown viewer
+* assign users to card
+* comments
 * theming
 
 ### markdown features
@@ -33,13 +37,7 @@ ___
 
 # planned features
 
-- [x] add/remove cards
-- [x] add/edit/delete stacks
-- [x] add/edit/delete boards
-- [x] add/edit/delete boards label
-- [x] manage comments
 - [ ] manage attachments
-- [x] improve boot time with local storage data
 
 # configuration
 
