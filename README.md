@@ -80,7 +80,7 @@ on first start, the application will create a default config.json file in $HOME/
     |----------|-----------------------|
     | e        | edit card description |
     | l        | edit card labels      |
-    | u        | edit card labels      |
+    | u        | edit card users       |
     | t        | edit card title       |
     | c        | view comments         |
     | ESC      | back to main view     |
