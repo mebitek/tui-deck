@@ -223,7 +223,7 @@ func ReplyComment(cardId int, parentId int, comment deck_structs.Comment) error 
 func DeleteComment(cardId int, commentId int) {
 
 	Modal.ClearButtons()
-	Modal.SetText(fmt.Sprintf("Are you sure to delete comment #%d?", cardId))
+	Modal.SetText(fmt.Sprintf("Are you sure to delete comment #%d?", commentId))
 	Modal.SetBackgroundColor(utils.GetColor(configuration.Color))
 
 	Modal.AddButtons([]string{"Yes", "No"})
