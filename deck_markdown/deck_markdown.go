@@ -105,3 +105,17 @@ func checkLink(str string) (result [][]string) {
 		return
 	}
 }
+
+func CountCheckList(description string) (int, int, error) {
+	re := regexp.MustCompile("- \\[ \\]")
+	matchUncheckd := re.FindAllStringSubmatch(description, -1)
+
+	re = regexp.MustCompile("- \\[x\\]")
+	matchChecked := re.FindAllStringSubmatch(description, -1)
+
+	if len(matchChecked) > 0 || len(matchUncheckd) > 0 {
+		return len(matchChecked), len(matchUncheckd) + len(matchChecked), nil
+	}
+	return 0, 0, fmt.Errorf("no check list found")
+
+}

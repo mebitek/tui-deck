@@ -725,6 +725,12 @@ func BuildStacks() {
 
 		for _, card := range s.Cards {
 			var labels = utils.BuildLabels(card)
+			secondLine := fmt.Sprintf("%s", labels)
+			checked, total, err := deck_markdown.CountCheckList(card.Description)
+			if err == nil {
+				secondLine = fmt.Sprintf("[white]%s | [-:-:-]%s", fmt.Sprintf("%d/%d", checked, total), labels)
+			}
+
 			CardsMap[card.Id] = card
 
 			dueDate := ""
@@ -744,7 +750,7 @@ func BuildStacks() {
 				assignersFormatter = fmt.Sprintf("- [red:gray:-]%s[-:-:-] ", utils.CommaString(assigners))
 			}
 
-			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] %s- %s %s", configuration.Color, card.Id, assignersFormatter, card.Title, dueDate), labels, rune(0), nil)
+			todoList.AddItem(fmt.Sprintf("[%s]#%d[white] %s- %s %s", configuration.Color, card.Id, assignersFormatter, card.Title, dueDate), secondLine, rune(0), nil)
 		}
 
 		todoList.SetSelectedFunc(func(index int, name string, secondName string, shortcut rune) {
