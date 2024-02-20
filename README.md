@@ -49,6 +49,7 @@ on first start, the application will create a default config.json file in $HOME/
   "password": "",
   "url": "https://nextcloud.example.com",
   "color": "#BF40BF"
+  "configDir": "$HOME/.config/tui-deck/"
 }
 ```
 
