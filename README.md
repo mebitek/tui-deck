@@ -49,6 +49,8 @@ on first start, the application will create a default config.json file in $HOME/
   "password": "",
   "url": "https://nextcloud.example.com",
   "color": "#BF40BF"
+  "color": "#BF40BF",
+  "insecure": false # Set to true if you're using self-signed certificates or you need to bypass certificate verification
   "configDir": "$HOME/.config/tui-deck/"
 }
 ```
